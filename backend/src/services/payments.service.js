@@ -96,6 +96,12 @@ async function verifyPayment(paymentId, verifiedByUserId) {
     const payment = paymentRows[0];
     if (!payment) throw httpError(404, 'Payment not found');
     if (payment.status === 'verified') throw httpError(409, 'Payment has already been verified');
+    if (!payment.installment_id) {
+      // Predates 019_add_payment_installment_id.sql -- a payment submitted
+      // under the old single-lump-sum flow, before every payment was
+      // required to link to an installment. Nothing to mark paid against.
+      throw httpError(409, 'This payment is not linked to an installment and cannot be verified');
+    }
 
     const updated = await paymentsRepo.setStatus(
       paymentId,
