@@ -6,23 +6,54 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { ApiError } from '@/shared/api/apiClient';
+import type { PaymentInstallment } from '@/shared/types/payment.types';
+import { formatPHP, toNumber } from '@/shared/utils/currency';
 import { useSubmitPayment } from '../api/payments.queries';
 import { PAYMENT_METHOD_OPTIONS, paymentFormSchema, type PaymentFormValues } from '../schemas';
 
 interface PaymentFormProps {
   projectId: string;
-  /** Prefilled from the accepted quotation's total — still editable. */
-  defaultAmount: number;
+  /**
+   * The next pending installment this submission targets. The backend
+   * resolves "the next pending installment" server-side and rejects any
+   * submitted amount that doesn't match it exactly, so the amount field is
+   * always derived from this installment (never freely entered).
+   */
+  installment: PaymentInstallment;
   onSubmitted?: () => void;
+}
+
+/**
+ * Parses a DATE-only string (e.g. "2026-07-18", no time component) from its
+ * literal year/month/day parts rather than handing the bare string to
+ * `new Date()` directly — same technique as
+ * `PaymentScheduleCard.tsx`'s `parseDateOnly`, kept local here since this
+ * component only needs it for the due-date header line.
+ */
+function parseDateOnly(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function formatDueDate(dateStr: string): string {
+  return parseDateOnly(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 /**
  * Payment method selection + proof-of-payment upload (Client Workflow steps
  * 9-10). Real validation per the brief: required file, required payment
- * method, positive amount.
+ * method, positive amount. The amount is fixed to the targeted installment
+ * — the backend rejects any amount that doesn't match the next pending
+ * installment exactly, so the field is read-only rather than freely
+ * editable.
  */
-export function PaymentForm({ projectId, defaultAmount, onSubmitted }: PaymentFormProps) {
+export function PaymentForm({ projectId, installment, onSubmitted }: PaymentFormProps) {
   const submitPayment = useSubmitPayment(projectId);
+  const installmentAmount = toNumber(installment.amount);
 
   const {
     control,
@@ -33,7 +64,7 @@ export function PaymentForm({ projectId, defaultAmount, onSubmitted }: PaymentFo
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
       paymentMethod: undefined,
-      amount: defaultAmount > 0 ? String(defaultAmount) : '',
+      amount: installmentAmount > 0 ? String(installmentAmount) : '',
       referenceNumber: '',
     },
   });
@@ -54,6 +85,11 @@ export function PaymentForm({ projectId, defaultAmount, onSubmitted }: PaymentFo
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+      <p className="text-sm text-muted-foreground">
+        Installment {installment.sequence} — {toNumber(installment.percentage)}% — due{' '}
+        {formatDueDate(installment.due_date)}
+      </p>
+
       {apiError && (
         <Alert variant="danger" title="Couldn't submit your payment" description={apiError.message} />
       )}
@@ -100,10 +136,11 @@ export function PaymentForm({ projectId, defaultAmount, onSubmitted }: PaymentFo
       />
 
       <Input
-        label="Amount to pay"
-        type="number"
-        step="0.01"
-        min="0"
+        label={`Amount to pay (Installment ${installment.sequence} of 5 — fixed)`}
+        type="text"
+        inputMode="decimal"
+        readOnly
+        helperText={`${formatPHP(installment.amount)} — this amount is set by your payment schedule and can't be edited.`}
         error={errors.amount?.message}
         {...register('amount')}
       />

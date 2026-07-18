@@ -94,4 +94,10 @@ export const adminProjectsApi = {
     });
     return response.data.data;
   },
+
+  /** Marks a fully-paid project delivered. 409s server-side if any installment is still pending, or if no payment schedule exists yet. */
+  async deliver(id: string): Promise<Project> {
+    const response = await apiClient.patch<ApiEnvelope<Project>>(`/admin/projects/${id}/deliver`);
+    return response.data.data;
+  },
 };

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -16,10 +16,12 @@ import type { ProjectStatusCode } from '@/shared/types/project.types';
 import { useAdminPackages } from '@/modules/packages/api/packages.queries';
 import { useAdminPayments, useRejectPayment, useVerifyPayment } from '@/modules/payments/api/payments.queries';
 import { PaymentProofPreview } from '@/modules/payments/components/PaymentProofPreview';
+import { PaymentScheduleCard } from '@/modules/payments/components/PaymentScheduleCard';
 import {
   useAcceptProject,
   useAdminProject,
   useDeclineProject,
+  useMarkProjectDelivered,
   useUpdateProjectStatus,
 } from '../api/projects.queries';
 import { AdminQuotationBuilder } from '../components/AdminQuotationBuilder';
@@ -74,6 +76,7 @@ export function AdminProjectDetailPage() {
   const declineProject = useDeclineProject(id ?? '');
   const verifyPayment = useVerifyPayment(id);
   const rejectPayment = useRejectPayment(id);
+  const markDelivered = useMarkProjectDelivered(id ?? '');
 
   const projectPayments = useMemo(
     () => (allPayments ?? []).filter((payment) => payment.project_id === id),
@@ -107,6 +110,7 @@ export function AdminProjectDetailPage() {
   // the admin must Accept first (-> under_review) before preparing a quotation.
   const isSubmitted = project.status_code === 'submitted';
   const isCancelled = project.status_code === 'cancelled';
+  const isDelivered = project.status_code === 'delivered' || project.status_code === 'completed';
 
   const needsQuotationAction =
     !isSubmitted && !isCancelled && (!latestQuotation || latestQuotation.status === 'draft');
@@ -116,6 +120,18 @@ export function AdminProjectDetailPage() {
   const statusError = updateStatus.error as ApiError | null;
   const reviewError = (acceptProject.error ?? declineProject.error) as ApiError | null;
   const isReviewPending = acceptProject.isPending || declineProject.isPending;
+
+  // Delivery is only legal once every installment on the payment schedule
+  // has been paid. `totalInstallments === 0` means the schedule hasn't even
+  // been created yet (no accepted quotation with a downpayment made) — that
+  // case is surfaced via helper text on the Delivery card rather than
+  // hiding the card outright, since it reads more clearly than a card that
+  // silently disappears depending on payment progress.
+  const totalInstallments = project.paymentInstallments?.length ?? 0;
+  const pendingInstallments =
+    project.paymentInstallments?.filter((installment) => installment.status === 'pending').length ?? 0;
+  const canDeliver = totalInstallments > 0 && pendingInstallments === 0;
+  const deliverError = markDelivered.error as ApiError | null;
 
   function handleUpdateStatus() {
     if (!nextStatus || nextStatus === project?.status_code) return;
@@ -318,6 +334,8 @@ export function AdminProjectDetailPage() {
         </CardContent>
       </Card>
 
+      <PaymentScheduleCard installments={project.paymentInstallments} />
+
       {latestPayment && (
         <Card>
           <CardHeader>
@@ -353,6 +371,46 @@ export function AdminProjectDetailPage() {
                   {verifyPayment.isPending ? 'Verifying...' : 'Verify payment'}
                 </Button>
               </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {!isSubmitted && !isCancelled && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Delivery</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {isDelivered ? (
+              <div className="flex items-center gap-2 text-sm font-medium text-success">
+                <CheckCircle2 className="size-4" aria-hidden="true" />
+                Delivered
+              </div>
+            ) : (
+              <>
+                {deliverError && (
+                  <Alert
+                    variant="danger"
+                    title="Couldn't mark as delivered"
+                    description={deliverError.message}
+                  />
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {totalInstallments === 0
+                    ? 'No payment schedule yet — nothing to deliver against.'
+                    : pendingInstallments > 0
+                      ? `${pendingInstallments} installment${pendingInstallments === 1 ? '' : 's'} remaining before this project can be delivered.`
+                      : 'All installments paid — ready to deliver.'}
+                </p>
+                <Button
+                  className="self-start"
+                  onClick={() => markDelivered.mutate()}
+                  disabled={!canDeliver || markDelivered.isPending}
+                >
+                  {markDelivered.isPending ? 'Marking as delivered...' : 'Mark as delivered'}
+                </Button>
+              </>
             )}
           </CardContent>
         </Card>

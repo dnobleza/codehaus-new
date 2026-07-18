@@ -17,6 +17,7 @@ import { QuotationSummaryCard } from '@/modules/quotations/components/QuotationS
 import { useProjectPayments } from '@/modules/payments/api/payments.queries';
 import { PaymentForm } from '@/modules/payments/components/PaymentForm';
 import { PaymentProofPreview } from '@/modules/payments/components/PaymentProofPreview';
+import { PaymentScheduleCard } from '@/modules/payments/components/PaymentScheduleCard';
 
 const PAYMENT_STATUS_BADGE = {
   pending: 'neutral',
@@ -58,11 +59,19 @@ export function ProjectDetailPage() {
   const quotationError = (acceptQuotation.error ?? rejectQuotation.error) as ApiError | null;
 
   const latestPayment = payments?.[0];
-  const hasVerifiedPayment = (payments ?? []).some((payment) => payment.status === 'verified');
+  // Sequence-ordered by the API, so `.find` naturally returns the
+  // lowest-sequence pending row — the same installment the server resolves
+  // "the next pending installment" to when validating a payment submission.
+  const nextPendingInstallment = project.paymentInstallments?.find(
+    (installment) => installment.status === 'pending',
+  );
+  const isFullyPaid = Boolean(project.paymentInstallments?.length) && !nextPendingInstallment;
+  const remainingInstallmentCount =
+    project.paymentInstallments?.filter((installment) => installment.status === 'pending').length ?? 0;
   const canSubmitPayment =
     latestQuotation?.status === 'accepted' &&
-    !hasVerifiedPayment &&
-    (!latestPayment || latestPayment.status === 'rejected');
+    Boolean(nextPendingInstallment) &&
+    (!latestPayment || latestPayment.status !== 'verification');
 
   return (
     <div className="flex flex-col gap-6">
@@ -165,7 +174,9 @@ export function ProjectDetailPage() {
         />
       )}
 
-      {canSubmitPayment && (
+      <PaymentScheduleCard installments={project.paymentInstallments} />
+
+      {canSubmitPayment && nextPendingInstallment && (
         <Card className="mx-auto w-full max-w-md">
           <CardHeader>
             <CardTitle>Select a payment method</CardTitle>
@@ -179,10 +190,7 @@ export function ProjectDetailPage() {
                 description="Please double-check your details and resubmit proof of payment."
               />
             )}
-            <PaymentForm
-              projectId={project.id}
-              defaultAmount={toNumber(latestQuotation?.total_amount)}
-            />
+            <PaymentForm key={nextPendingInstallment.id} projectId={project.id} installment={nextPendingInstallment} />
           </CardContent>
         </Card>
       )}
@@ -198,7 +206,7 @@ export function ProjectDetailPage() {
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            {project.status_code === 'accepted' ? (
+            {isFullyPaid ? (
               <Alert
                 variant="success"
                 title="Your project has been accepted!"
@@ -209,6 +217,12 @@ export function ProjectDetailPage() {
                 variant="warning"
                 title="Payment under verification"
                 description="We've received your payment and are verifying it. This page updates automatically."
+              />
+            ) : project.status_code === 'accepted' ? (
+              <Alert
+                variant="info"
+                title="Downpayment received"
+                description={`${remainingInstallmentCount} installment${remainingInstallmentCount === 1 ? '' : 's'} remaining. You can submit your next payment below.`}
               />
             ) : null}
             <dl className="grid grid-cols-2 gap-2 text-sm">
@@ -224,7 +238,7 @@ export function ProjectDetailPage() {
         </Card>
       )}
 
-      {project.status_code === 'accepted' && !latestPayment && (
+      {project.status_code === 'accepted' && !latestPayment && isFullyPaid && (
         <div className="flex flex-col items-center gap-2 py-8 text-center">
           <CheckCircle2 className="size-10 text-success" aria-hidden="true" />
           <p className="text-base font-semibold text-foreground">Your project has been accepted!</p>

@@ -23,6 +23,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatusCode, string> = {
   revision_in_progress: 'Revision In Progress',
   ready_for_deployment: 'Ready for Deployment',
   deployed: 'Deployed',
+  delivered: 'Delivered',
   completed: 'Completed',
   on_hold: 'On Hold',
   cancelled: 'Cancelled',
@@ -48,6 +49,7 @@ export const PROJECT_STATUS_BADGE_VARIANT: Record<ProjectStatusCode, BadgeVarian
   revision_in_progress: 'primary',
   ready_for_deployment: 'primary',
   deployed: 'success',
+  delivered: 'success',
   completed: 'success',
   on_hold: 'danger',
   cancelled: 'danger',
@@ -91,7 +93,7 @@ export const PROJECT_STATUS_PHASES: ProjectStatusPhase[] = [
       'ready_for_deployment',
     ],
   },
-  { key: 'delivered', label: 'Delivered', statuses: ['deployed', 'completed'] },
+  { key: 'delivered', label: 'Delivered', statuses: ['deployed', 'delivered', 'completed'] },
 ];
 
 const EXCEPTION_STATUSES = new Set<ProjectStatusCode>(['on_hold', 'cancelled']);
@@ -175,6 +177,7 @@ const NEXT_STATUS_MAP: Partial<Record<ProjectStatusCode, ProjectStatusCode[]>> =
   revision_in_progress: ['in_testing'],
   ready_for_deployment: ['deployed'],
   deployed: ['completed'],
+  delivered: ['completed'],
   completed: [],
   on_hold: FORWARD_PROGRESSION,
   cancelled: [],

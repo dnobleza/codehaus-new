@@ -1,3 +1,4 @@
+import type { PaymentInstallment } from './payment.types';
 import type { Quotation } from './quotation.types';
 
 /**
@@ -28,6 +29,7 @@ export type ProjectStatusCode =
   | 'revision_in_progress'
   | 'ready_for_deployment'
   | 'deployed'
+  | 'delivered'
   | 'completed'
   | 'on_hold'
   | 'cancelled';
@@ -57,4 +59,12 @@ export interface Project {
   created_at: string;
   updated_at: string;
   quotations?: Quotation[];
+  /**
+   * Only present when fetched via `GET /projects/:id` or
+   * `GET /admin/projects/:id` (nests the raw `payment_installments` rows,
+   * ordered by `sequence`); `GET /projects` (list) returns bare rows
+   * without it — do not assume `paymentInstallments` exists on rows coming
+   * from the list endpoint.
+   */
+  paymentInstallments?: PaymentInstallment[];
 }

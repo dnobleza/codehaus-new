@@ -26,3 +26,25 @@ export interface Payment {
   verified_at: string | null;
   created_at: string;
 }
+
+export type PaymentInstallmentStatus = 'pending' | 'paid';
+
+/**
+ * Matches the raw `payment_installments` row shape from
+ * `backend/src/repositories/paymentInstallments.repository.js` (a bare
+ * `SELECT * ... ORDER BY sequence ASC`, no presenter).
+ */
+export interface PaymentInstallment {
+  id: string;
+  project_id: string;
+  quotation_id: string;
+  sequence: number;
+  /** NUMERIC(5,2) as a string. */
+  percentage: string;
+  /** NUMERIC(12,2) as a string. */
+  amount: string;
+  /** DATE as a string (e.g. "2026-07-18"). */
+  due_date: string;
+  status: PaymentInstallmentStatus;
+  created_at: string;
+}
