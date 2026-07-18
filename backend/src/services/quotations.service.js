@@ -72,7 +72,17 @@ const INSTALLMENT_WEEK_SPACING_DAYS = 7;
 // dates are a fixed weekly cadence anchored to "now" (schedule-generation
 // time) -- not projects.start_date, which is never populated anywhere in
 // this codebase.
+//
+// Idempotency guard: quotations are versioned per project (a project can
+// accumulate more than one over its life -- see 011_create_quotations.sql),
+// so a project that already has a schedule from an earlier accepted
+// quotation must not get a second one generated on top of it -- that would
+// violate payment_installments_project_sequence_key's UNIQUE(project_id,
+// sequence) constraint. Skip silently rather than crash the accept.
 async function generateInstallmentSchedule(dbClient, { projectId, quotationId, totalAmount }) {
+  const existingCount = await paymentInstallmentsRepo.countForProject(projectId, dbClient);
+  if (existingCount > 0) return;
+
   const total = toMoney(totalAmount);
   const amounts = INSTALLMENT_PERCENTAGES.slice(0, -1).map((pct) => toMoney((total * pct) / 100));
   const amountSoFar = amounts.reduce((sum, amount) => sum + amount, 0);
