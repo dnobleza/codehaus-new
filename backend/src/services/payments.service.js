@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const paymentsRepo = require('../repositories/payments.repository');
 const projectsRepo = require('../repositories/projects.repository');
+const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
 const { resolvePaymentProofPath } = require('../middleware/upload.middleware');
 const logger = require('../utils/logger');
 const TAG = '[PAYMENTS-SERVICE]';
@@ -11,22 +12,15 @@ function httpError(statusCode, message) {
   return error;
 }
 
-// A client may submit a payment once their quotation has been accepted, OR
-// resubmit after a previous attempt was rejected -- rejecting a payment
-// deliberately leaves the project's status_code at 'payment_verification'
-// (see rejectPayment below), so that status is also a valid source state
-// for a fresh submission.
-const CLIENT_PAYMENT_SOURCE_STATUSES = ['quotation_accepted', 'payment_verification'];
-
-// Combines Client Workflow steps 9 ("select payment method") and 10
-// ("upload proof of payment") into a single write: the brief's endpoint
-// list gives POST /projects/:id/payments one multipart body containing
-// payment_method + amount + reference_number + the proof file together, so
-// there is no intermediate "payment method selected, proof not yet
-// attached" row to model. The payment is therefore created directly in
-// 'verification' status (proof already attached), not 'pending' -- 'pending'
-// is reserved by the schema's CHECK constraint for a payment that exists
-// without proof yet, which this API never produces.
+// A client submits a payment against whichever installment is next in
+// their project's payment_installments schedule (see
+// docs/superpowers/specs/2026-07-18-payment-installment-plan-design.md) --
+// the client never chooses/names an installment; the server resolves it.
+// The submitted amount must match that installment's amount exactly (never
+// trust a client-supplied amount against the schedule). Combines Client
+// Workflow steps 9 ("select payment method") and 10 ("upload proof of
+// payment") into a single write, same as before -- the payment is created
+// directly in 'verification' status (proof already attached).
 async function createPayment({ projectId, clientId, paymentMethod, amount, referenceNumber, proofOfPaymentUrl }) {
   const client = await pool.connect();
   try {
@@ -38,19 +32,35 @@ async function createPayment({ projectId, clientId, paymentMethod, amount, refer
     );
     const project = projectRows[0];
     if (!project) throw httpError(404, 'Project not found');
-    if (!CLIENT_PAYMENT_SOURCE_STATUSES.includes(project.status_code)) {
+
+    const installment = await paymentInstallmentsRepo.findNextPending(projectId, client);
+    if (!installment) {
       throw httpError(409, 'This project is not currently awaiting a payment submission');
+    }
+    if (Number(amount) !== Number(installment.amount)) {
+      throw httpError(
+        409,
+        `Amount must match installment ${installment.sequence}'s due amount of ${installment.amount}`
+      );
     }
 
     const payment = await paymentsRepo.insert(
-      { projectId, paymentMethod, amount, referenceNumber, proofOfPaymentUrl, status: 'verification' },
+      {
+        projectId,
+        paymentMethod,
+        amount,
+        referenceNumber,
+        proofOfPaymentUrl,
+        status: 'verification',
+        installmentId: installment.id,
+      },
       client
     );
 
-    await projectsRepo.updateStatus(projectId, 'payment_verification', client);
-
     await client.query('COMMIT');
-    logger.info(`${TAG} Client ${clientId} submitted payment ${payment.id} for project ${projectId}`);
+    logger.info(
+      `${TAG} Client ${clientId} submitted payment ${payment.id} for project ${projectId} (installment ${installment.sequence})`
+    );
     return payment;
   } catch (error) {
     await client.query('ROLLBACK');
@@ -70,9 +80,13 @@ async function listPaymentsAdmin(filters) {
   return paymentsRepo.listAll(filters);
 }
 
-// Verifying a payment transitions the parent project to 'accepted' in the
-// SAME transaction (Client Workflow steps 11 -> 12), and stamps
-// verified_by/verified_at.
+// Verifying a payment marks its linked installment 'paid'. Only verifying
+// the DOWNPAYMENT (sequence 1) also transitions the parent project to
+// 'accepted' in the SAME transaction (Client Workflow steps 11 -> 12),
+// matching the original single-payment behavior. Installments 2-5 verify
+// without touching projects.status_code -- the project is already in
+// progress by then, and unconditionally overwriting status_code would
+// clobber real build-progress tracking (e.g. 'in_development').
 async function verifyPayment(paymentId, verifiedByUserId) {
   const client = await pool.connect();
   try {
@@ -88,10 +102,17 @@ async function verifyPayment(paymentId, verifiedByUserId) {
       { status: 'verified', verifiedBy: verifiedByUserId, verifiedAt: new Date() },
       client
     );
-    await projectsRepo.updateStatus(payment.project_id, 'accepted', client);
+
+    const installment = await paymentInstallmentsRepo.setPaid(payment.installment_id, client);
+
+    if (installment.sequence === 1) {
+      await projectsRepo.updateStatus(payment.project_id, 'accepted', client);
+    }
 
     await client.query('COMMIT');
-    logger.info(`${TAG} Payment ${paymentId} verified by user ${verifiedByUserId}; project ${payment.project_id} marked accepted`);
+    logger.info(
+      `${TAG} Payment ${paymentId} verified by user ${verifiedByUserId}; installment ${installment.sequence} marked paid`
+    );
     return updated;
   } catch (error) {
     await client.query('ROLLBACK');
