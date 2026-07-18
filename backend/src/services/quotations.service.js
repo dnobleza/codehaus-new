@@ -3,6 +3,7 @@ const quotationsRepo = require('../repositories/quotations.repository');
 const projectsRepo = require('../repositories/projects.repository');
 const packagesRepo = require('../repositories/packages.repository');
 const addonsRepo = require('../repositories/addons.repository');
+const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
 const logger = require('../utils/logger');
 const TAG = '[QUOTATIONS-SERVICE]';
 
@@ -57,6 +58,45 @@ function computeTotal(basePrice, discountAmount, addonRows) {
   const total = toMoney(basePrice - discountAmount + addonsTotal);
   if (total < 0) throw httpError(400, 'Discount cannot exceed the package price plus add-ons total');
   return total;
+}
+
+const INSTALLMENT_PERCENTAGES = [50, 20, 10, 10, 10];
+const INSTALLMENT_WEEK_SPACING_DAYS = 7;
+
+// Generates the fixed 50/20/10/10/10 payment schedule the moment a client
+// accepts a quotation (see
+// docs/superpowers/specs/2026-07-18-payment-installment-plan-design.md).
+// Installments 1-4 are rounded to the cent from the percentage; installment
+// 5 absorbs whatever rounding remainder is left, so the 5 rows always sum
+// to EXACTLY totalAmount, never a cent over/under from float rounding. Due
+// dates are a fixed weekly cadence anchored to "now" (schedule-generation
+// time) -- not projects.start_date, which is never populated anywhere in
+// this codebase.
+async function generateInstallmentSchedule(dbClient, { projectId, quotationId, totalAmount }) {
+  const total = toMoney(totalAmount);
+  const amounts = INSTALLMENT_PERCENTAGES.slice(0, -1).map((pct) => toMoney((total * pct) / 100));
+  const amountSoFar = amounts.reduce((sum, amount) => sum + amount, 0);
+  amounts.push(toMoney(total - amountSoFar));
+
+  const generatedAt = new Date();
+
+  for (let index = 0; index < INSTALLMENT_PERCENTAGES.length; index += 1) {
+    const sequence = index + 1;
+    const dueDate = new Date(generatedAt);
+    dueDate.setDate(dueDate.getDate() + (sequence - 1) * INSTALLMENT_WEEK_SPACING_DAYS);
+
+    await paymentInstallmentsRepo.insert(
+      {
+        projectId,
+        quotationId,
+        sequence,
+        percentage: INSTALLMENT_PERCENTAGES[index],
+        amount: amounts[index],
+        dueDate,
+      },
+      dbClient
+    );
+  }
 }
 
 async function persistQuotation(dbClient, { projectId, packageId, discountAmount, status, sentAt, pricing }) {
@@ -306,6 +346,14 @@ async function respondToQuotation({ projectId, quotationId, clientId, decision }
       client
     );
     await projectsRepo.updateStatus(projectId, newProjectStatus, client);
+
+    if (decision === 'accept') {
+      await generateInstallmentSchedule(client, {
+        projectId,
+        quotationId,
+        totalAmount: quotation.total_amount,
+      });
+    }
 
     await client.query('COMMIT');
     logger.info(`${TAG} Client ${clientId} ${decision}ed quotation ${quotationId}`);
