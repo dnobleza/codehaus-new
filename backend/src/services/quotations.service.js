@@ -346,6 +346,15 @@ async function respondToQuotation({ projectId, quotationId, clientId, decision }
     if (quotation.status !== 'sent') {
       throw httpError(409, 'Only a sent quotation awaiting a response can be accepted or rejected');
     }
+    // A ₱0 quotation cannot be accepted: generateInstallmentSchedule would
+    // need to insert amount=0 rows, which violates payment_installments'
+    // CHECK (amount > 0) -- and even if it didn't, a $0 "proof of payment"
+    // is conceptually broken against payments' own CHECK (amount > 0).
+    // Free/promotional projects need real product design, not a guessed
+    // special case here.
+    if (decision === 'accept' && Number(quotation.total_amount) === 0) {
+      throw httpError(400, 'This quotation totals ₱0 and cannot be accepted as-is');
+    }
 
     const newQuotationStatus = decision === 'accept' ? 'accepted' : 'rejected';
     const newProjectStatus = decision === 'accept' ? 'quotation_accepted' : 'quotation_rejected';
