@@ -2,6 +2,7 @@ const projectsRepo = require('../repositories/projects.repository');
 const packagesRepo = require('../repositories/packages.repository');
 const quotationsRepo = require('../repositories/quotations.repository');
 const projectStatusesRepo = require('../repositories/projectStatuses.repository');
+const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
 const logger = require('../utils/logger');
 const TAG = '[PROJECTS-SERVICE]';
 
@@ -35,7 +36,8 @@ async function getProjectForClient(id, clientId) {
   const project = await projectsRepo.findByIdForClient(id, clientId);
   if (!project) throw httpError(404, 'Project not found');
   const quotations = await quotationsRepo.listByProjectWithAddons(id);
-  return { ...project, quotations };
+  const paymentInstallments = await paymentInstallmentsRepo.listByProject(id);
+  return { ...project, quotations, paymentInstallments };
 }
 
 async function listProjectsAdmin(filters) {
@@ -46,7 +48,8 @@ async function getProjectAdmin(id) {
   const project = await projectsRepo.findById(id);
   if (!project) throw httpError(404, 'Project not found');
   const quotations = await quotationsRepo.listByProjectWithAddons(id);
-  return { ...project, quotations };
+  const paymentInstallments = await paymentInstallmentsRepo.listByProject(id);
+  return { ...project, quotations, paymentInstallments };
 }
 
 // Judgment call (documented per task brief): the schema has no state-
@@ -106,6 +109,30 @@ async function declineProjectAdmin(id, reason) {
   return updated;
 }
 
+// Admin/staff-only. Gated purely on payment completion -- ALL of a
+// project's payment_installments must be 'paid' -- not on status_code, per
+// docs/superpowers/specs/2026-07-18-payment-installment-plan-design.md:
+// delivery readiness is a build/QA judgment call, independent of exact
+// status-sequencing.
+async function markProjectDeliveredAdmin(id) {
+  const project = await projectsRepo.findById(id);
+  if (!project) throw httpError(404, 'Project not found');
+
+  const totalInstallments = await paymentInstallmentsRepo.countForProject(id);
+  if (totalInstallments === 0) {
+    throw httpError(409, 'This project has no payment schedule yet; nothing to deliver against');
+  }
+
+  const pendingInstallments = await paymentInstallmentsRepo.countPending(id);
+  if (pendingInstallments > 0) {
+    throw httpError(409, `Project is not fully paid; ${pendingInstallments} installment(s) remaining`);
+  }
+
+  const updated = await projectsRepo.updateStatus(id, 'delivered');
+  logger.info(`${TAG} Project ${id} marked delivered`);
+  return updated;
+}
+
 module.exports = {
   createProject,
   listProjectsForClient,
@@ -115,4 +142,5 @@ module.exports = {
   updateProjectStatusAdmin,
   acceptProjectAdmin,
   declineProjectAdmin,
+  markProjectDeliveredAdmin,
 };
