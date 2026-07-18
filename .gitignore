@@ -34,3 +34,6 @@ CLAUDE.md
 # Playwright MCP cache and ad-hoc QA screenshots
 .playwright-mcp/
 /*.png
+
+# Local git worktrees
+.worktrees/
