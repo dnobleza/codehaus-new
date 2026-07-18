@@ -5,8 +5,8 @@ const pool = require('../config/database');
 
 async function insert(data, db = pool) {
   const { rows } = await db.query(
-    `INSERT INTO payments (project_id, payment_method, amount, reference_number, proof_of_payment_url, status)
-     VALUES ($1,$2,$3,$4,$5,$6)
+    `INSERT INTO payments (project_id, payment_method, amount, reference_number, proof_of_payment_url, status, installment_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
      RETURNING *`,
     [
       data.projectId,
@@ -15,6 +15,7 @@ async function insert(data, db = pool) {
       data.referenceNumber ?? null,
       data.proofOfPaymentUrl ?? null,
       data.status ?? 'pending',
+      data.installmentId ?? null,
     ]
   );
   return rows[0];
