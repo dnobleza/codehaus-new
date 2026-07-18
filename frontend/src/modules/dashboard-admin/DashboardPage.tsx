@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { FolderKanban, LifeBuoy, Receipt, Wallet } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -5,6 +6,8 @@ import { ActivityFeed } from '@/shared/components/feature/ActivityFeed';
 import { DataTable } from '@/shared/components/feature/DataTable';
 import { StatCard } from '@/shared/components/feature/StatCard';
 import { useAuthStore } from '@/shared/store/auth.store';
+import { useAdminProjects } from '@/modules/projects/api/projects.queries';
+import { useAdminPayments } from '@/modules/payments/api/payments.queries';
 import { MOCK_ADMIN_ACTIVITY, MOCK_ADMIN_PAYMENTS, MOCK_ADMIN_TASKS } from './mockData';
 
 const PAYMENT_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = {
@@ -21,6 +24,18 @@ const PAYMENT_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
 
+  // Real counts wired from the admin project queue / payment verification
+  // queue (task brief: "counts: pending review, awaiting payment
+  // verification"); revenue/support tickets remain mock — this feature
+  // doesn't provide a real revenue aggregation or support-ticket endpoint.
+  const { data: projects } = useAdminProjects();
+  const { data: payments } = useAdminPayments({ status: 'verification' });
+
+  const pendingReviewCount = (projects ?? []).filter(
+    (project) => project.status_code === 'submitted' || project.status_code === 'under_review',
+  ).length;
+  const awaitingVerificationCount = payments?.length ?? 0;
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -33,18 +48,16 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Active projects"
-          value="18"
-          icon={FolderKanban}
-          trend={{ value: '+3 this month', direction: 'up' }}
-        />
-        <StatCard
-          label="Outstanding invoices"
-          value="$24,300"
-          icon={Receipt}
-          trend={{ value: '4 overdue', direction: 'down' }}
-        />
+        <Link to="/admin/dashboard/projects" className="block">
+          <StatCard label="Projects awaiting review" value={String(pendingReviewCount)} icon={FolderKanban} />
+        </Link>
+        <Link to="/admin/dashboard/payments" className="block">
+          <StatCard
+            label="Awaiting payment verification"
+            value={String(awaitingVerificationCount)}
+            icon={Receipt}
+          />
+        </Link>
         <StatCard
           label="Monthly revenue"
           value="$58,900"

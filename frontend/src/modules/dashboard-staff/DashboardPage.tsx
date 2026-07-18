@@ -1,4 +1,5 @@
-import { CheckSquare, FolderKanban, LifeBuoy } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { FolderKanban, LifeBuoy, Receipt } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { ActivityFeed } from '@/shared/components/feature/ActivityFeed';
@@ -6,6 +7,8 @@ import { DataTable } from '@/shared/components/feature/DataTable';
 import { StatCard } from '@/shared/components/feature/StatCard';
 import { useAuthStore } from '@/shared/store/auth.store';
 import { PROJECT_STATUS_VARIANT } from '@/shared/utils/statusVariant';
+import { useAdminProjects } from '@/modules/projects/api/projects.queries';
+import { useAdminPayments } from '@/modules/payments/api/payments.queries';
 import { MOCK_STAFF_ACTIVITY, MOCK_STAFF_PROJECTS } from './mockData';
 
 /**
@@ -16,6 +19,17 @@ import { MOCK_STAFF_ACTIVITY, MOCK_STAFF_PROJECTS } from './mockData';
  */
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
+
+  // Staff share the same admin/staff-scoped endpoints (task brief: staff
+  // gets the same project queue + payment verification access as admin),
+  // so these two counts are real; "tasks due this week"/tickets stay mock.
+  const { data: projects } = useAdminProjects();
+  const { data: payments } = useAdminPayments({ status: 'verification' });
+
+  const pendingReviewCount = (projects ?? []).filter(
+    (project) => project.status_code === 'submitted' || project.status_code === 'under_review',
+  ).length;
+  const awaitingVerificationCount = payments?.length ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,8 +43,16 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Assigned projects" value="3" icon={FolderKanban} />
-        <StatCard label="Tasks due this week" value="5" icon={CheckSquare} />
+        <Link to="/staff/dashboard/projects" className="block">
+          <StatCard label="Projects awaiting review" value={String(pendingReviewCount)} icon={FolderKanban} />
+        </Link>
+        <Link to="/staff/dashboard/payments" className="block">
+          <StatCard
+            label="Awaiting payment verification"
+            value={String(awaitingVerificationCount)}
+            icon={Receipt}
+          />
+        </Link>
         <StatCard label="Open tickets assigned" value="2" icon={LifeBuoy} />
       </div>
 

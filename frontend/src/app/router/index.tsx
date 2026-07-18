@@ -48,6 +48,18 @@ export const router = createBrowserRouter([
                 index: true,
                 lazy: lazyPage(() => import('@/modules/dashboard-client/DashboardPage')),
               },
+              {
+                path: 'projects',
+                lazy: lazyPage(() => import('@/modules/projects/pages/ProjectsListPage')),
+              },
+              {
+                path: 'projects/new',
+                lazy: lazyPage(() => import('@/modules/projects/pages/NewProjectPage')),
+              },
+              {
+                path: 'projects/:id',
+                lazy: lazyPage(() => import('@/modules/projects/pages/ProjectDetailPage')),
+              },
             ],
           },
         ],
@@ -63,6 +75,18 @@ export const router = createBrowserRouter([
                 index: true,
                 lazy: lazyPage(() => import('@/modules/dashboard-staff/DashboardPage')),
               },
+              {
+                path: 'projects',
+                lazy: lazyPage(() => import('@/modules/projects/pages/AdminProjectsListPage')),
+              },
+              {
+                path: 'projects/:id',
+                lazy: lazyPage(() => import('@/modules/projects/pages/AdminProjectDetailPage')),
+              },
+              {
+                path: 'payments',
+                lazy: lazyPage(() => import('@/modules/payments/pages/AdminPaymentsQueuePage')),
+              },
             ],
           },
         ],
@@ -77,6 +101,34 @@ export const router = createBrowserRouter([
               {
                 index: true,
                 lazy: lazyPage(() => import('@/modules/dashboard-admin/DashboardPage')),
+              },
+              {
+                path: 'projects',
+                lazy: lazyPage(() => import('@/modules/projects/pages/AdminProjectsListPage')),
+              },
+              {
+                path: 'projects/:id',
+                lazy: lazyPage(() => import('@/modules/projects/pages/AdminProjectDetailPage')),
+              },
+              {
+                path: 'payments',
+                lazy: lazyPage(() => import('@/modules/payments/pages/AdminPaymentsQueuePage')),
+              },
+              {
+                path: 'packages',
+                lazy: lazyPage(() => import('@/modules/packages/pages/AdminPackagesPage')),
+              },
+              {
+                path: 'packages/new',
+                lazy: lazyPage(() => import('@/modules/packages/pages/AdminPackageFormPage')),
+              },
+              {
+                path: 'packages/:id/edit',
+                lazy: lazyPage(() => import('@/modules/packages/pages/AdminPackageFormPage')),
+              },
+              {
+                path: 'addons',
+                lazy: lazyPage(() => import('@/modules/addons/pages/AdminAddonsPage')),
               },
             ],
           },

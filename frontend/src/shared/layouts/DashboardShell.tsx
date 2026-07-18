@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { LogOut, Menu, X } from 'lucide-react';
 
@@ -13,24 +13,50 @@ interface DashboardShellProps {
   roleLabel: string;
 }
 
+const navItemClasses = (isActive: boolean) =>
+  cn(
+    'flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors',
+    isActive
+      ? 'bg-primary/8 text-primary'
+      : 'text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40',
+  );
+
+/**
+ * Nav items with a `path` render as real `Link`s with route-based active
+ * detection; items without one (modules not built out yet) render as inert
+ * disabled buttons — this keeps the still-mock staff/admin dashboards
+ * working unchanged while the client sidebar gains real navigation.
+ */
 function SidebarNav({ navItems, onNavigate }: { navItems: DashboardNavItem[]; onNavigate?: () => void }) {
+  const location = useLocation();
+
   return (
     <nav aria-label="Dashboard" className="flex flex-1 flex-col gap-1 px-3 py-4">
-      {navItems.map((item, index) => {
-        const isActive = index === 0;
+      {navItems.map((item) => {
+        if (item.path) {
+          const isActive =
+            item.path === location.pathname || location.pathname.startsWith(`${item.path}/`);
+          return (
+            <Link
+              key={item.label}
+              to={item.path}
+              aria-current={isActive ? 'page' : undefined}
+              onClick={onNavigate}
+              className={navItemClasses(isActive)}
+            >
+              <item.icon className="size-5 shrink-0" aria-hidden="true" />
+              {item.label}
+            </Link>
+          );
+        }
+
         return (
           <button
             key={item.label}
             type="button"
             disabled={item.disabled}
-            aria-current={isActive ? 'page' : undefined}
             onClick={onNavigate}
-            className={cn(
-              'flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors',
-              isActive
-                ? 'bg-primary/8 text-primary'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40',
-            )}
+            className={navItemClasses(false)}
           >
             <item.icon className="size-5 shrink-0" aria-hidden="true" />
             {item.label}
