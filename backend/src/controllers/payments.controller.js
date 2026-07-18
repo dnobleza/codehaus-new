@@ -1,8 +1,10 @@
+const logger = require('../utils/logger');
 const { toHttpError, httpError } = require('../utils/httpError');
 const { createPaymentSchema } = require('../validators/payments.validator');
 const paymentsService = require('../services/payments.service');
 const { relativeUploadPath } = require('../middleware/upload.middleware');
 const { presentPayment, presentPayments } = require('../utils/paymentPresenter');
+const TAG = '[PAYMENTS-CONTROLLER]';
 
 exports.create = async (req, res, next) => {
   try {
@@ -20,6 +22,7 @@ exports.create = async (req, res, next) => {
       proofOfPaymentUrl: relativeUploadPath(req.file.path),
     });
 
+    logger.info(`${TAG} Payment ${payment.id} submitted for project ${req.params.id}`);
     res.status(201).json({
       success: true,
       message: 'Payment submitted and awaiting verification',
@@ -33,6 +36,7 @@ exports.create = async (req, res, next) => {
 exports.list = async (req, res, next) => {
   try {
     const payments = await paymentsService.listPaymentsForClientProject(req.params.id, req.user.id);
+    logger.info(`${TAG} Listed ${payments.length} payments for project ${req.params.id}`);
     res.status(200).json({ success: true, message: 'Payments retrieved successfully', data: presentPayments(payments) });
   } catch (error) {
     next(toHttpError(error));
@@ -51,6 +55,7 @@ exports.getProof = async (req, res, next) => {
       requestingUser: req.user,
     });
 
+    logger.info(`${TAG} Proof of payment ${req.params.paymentId} served for project ${req.params.id}`);
     res.sendFile(absolutePath, (error) => {
       if (error && !res.headersSent) {
         error.statusCode = error.statusCode || 404;

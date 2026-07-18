@@ -2,6 +2,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const logger = require('../utils/logger');
+const TAG = '[UPLOAD-MIDDLEWARE]';
 
 // Local disk storage under backend/uploads/{thumbnails,banners,payment-proofs}/.
 // backend/uploads/ is already gitignored (see .gitignore's "Uploads (multer
@@ -99,6 +101,7 @@ function wrapUpload(multerMiddleware) {
     multerMiddleware(req, res, (err) => {
       if (err) {
         err.statusCode = err.statusCode || 400;
+        logger.warn(`${TAG} Upload rejected: ${err.message}`);
         next(err);
         return;
       }
