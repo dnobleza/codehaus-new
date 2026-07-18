@@ -1,0 +1,13 @@
+-- Adds a place to record WHY an admin/staff declined a submitted project
+-- request. When a project is declined it transitions to the terminal
+-- 'cancelled' status (see 016_reconcile_project_statuses.sql), but the flat
+-- project_statuses lookup only records THAT it was cancelled, not the reason.
+-- Storing the reason on the project row (rather than a separate audit table)
+-- keeps it trivially available to both the admin detail view and the client's
+-- own project detail page, which -- per the approved design -- surfaces the
+-- decline reason back to the client.
+--
+-- Nullable because the overwhelming majority of projects are never declined;
+-- the column is only populated on the decline transition and stays NULL for
+-- every other lifecycle path.
+ALTER TABLE projects ADD COLUMN decline_reason TEXT;
