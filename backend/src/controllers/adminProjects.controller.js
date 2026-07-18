@@ -51,6 +51,15 @@ exports.decline = async (req, res, next) => {
   }
 };
 
+exports.deliver = async (req, res, next) => {
+  try {
+    const project = await projectsService.markProjectDeliveredAdmin(req.params.id);
+    res.status(200).json({ success: true, message: 'Project marked as delivered', data: project });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
 exports.createAndSendQuotation = async (req, res, next) => {
   try {
     const data = adminQuotationSchema.parse(req.body);

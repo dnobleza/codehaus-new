@@ -14,6 +14,7 @@ router.get('/:id', adminProjectsController.getById);
 router.patch('/:id/status', adminProjectsController.updateStatus);
 router.patch('/:id/accept', adminProjectsController.accept);
 router.patch('/:id/decline', adminProjectsController.decline);
+router.patch('/:id/deliver', adminProjectsController.deliver);
 
 router.post('/:id/quotations', adminProjectsController.createAndSendQuotation);
 router.patch('/:id/quotations/:quotationId', adminProjectsController.editDraftQuotation);
