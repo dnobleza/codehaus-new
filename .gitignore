@@ -37,3 +37,6 @@ CLAUDE.md
 
 # Local git worktrees
 .worktrees/
+
+# Superpowers subagent-driven-development scratch state
+.superpowers/
