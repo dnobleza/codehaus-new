@@ -14,6 +14,7 @@ Scope: documentation only. No implementation code is included. All values below 
 4. [Responsive Rules](#4-responsive-rules)
 5. [Accessibility Notes](#5-accessibility-notes)
 6. [Developer Handoff Notes](#6-developer-handoff-notes)
+7. [Landing Page Visual Treatment](#7-landing-page-visual-treatment)
 
 ---
 
@@ -529,3 +530,162 @@ Precise values for implementation, consolidated for quick reference:
 **Interaction timings:** Modal/backdrop fade 150ms; Drawer slide 200ms ease; Toast entrance slide+fade 200ms, exit fade+collapse 150ms; message bubble fade-in 150ms; skeleton shimmer loop 1500ms; spinner rotation 800ms; button press translate 1px (duration inherits Tailwind's default `transition-all`, effectively ~150ms).
 
 **Breakpoints:** `sm` 640px, `md` 768px, `lg` 1024px, `xl` 1280px, `2xl` 1536px — treat `lg` (1024px) as the desktop/tablet boundary and `sm` (640px) as the tablet/mobile boundary for all responsive rules in §4.
+
+---
+
+## 7. Landing Page Visual Treatment
+
+Version 1.1 addendum. Scope: `frontend/src/modules/marketing/**` only (`LandingPage.tsx` and its `components/` — Navbar, Hero, Services, Pricing, About, Contact, Footer). Nothing in this section applies to the authenticated app shell (Sidebar, dashboards, `auth`, etc.).
+
+**Direction.** Move the landing page from "flat sections with one decorative panel behind the Hero" to a single coherent light/glass system that reads as more elegant and premium, in the vein of suzzyai.com's formula — light neutral base, one saturated brand accent expressed through gradients/glass rather than flat color blocks, frosted translucent header, generous whitespace — reimplemented with **our** brand blue (`--primary` / `#2563EB`) and **our** existing primitives (`BrandGradientAccent`, `Card`, `Button`, the documented spacing/radius/shadow scale). This is a reskin, not a new design language: every recommendation below extends a token or component that already exists in §1–§2 rather than inventing a parallel one.
+
+**Explicitly unchanged (hard constraints):**
+- `font-poppins` stays scoped to the whole landing page exactly as wired in `LandingLayout.tsx`; no `font-family` changes anywhere in this section. Weight/size/tracking adjustments to Poppins headings and body text are in scope.
+- Logo height (`h-14` in `Footer.tsx`) is unchanged. (Note: `Navbar.tsx` currently renders the logo at `h-19`, not `h-14` — this section does not touch logo sizing in either file; leave both exactly as they are today.)
+- `--background` (Alice Blue, `#F0F8FF`) remains the literal page background on every section. All gradient/glass treatment below is a decorative overlay on top of it, same layering pattern `BrandGradientAccent` already uses in Hero (`absolute` + negative `z-index`), never a replacement of the base color.
+- No new dependencies. Everything below is achievable with existing Tailwind utilities, the existing `color-mix()`/`radial-gradient()` arbitrary-value pattern already used in `BrandGradientAccent`, and existing shadcn/ui components (`Card`, `Button`, `Input`, `Alert`).
+
+### 7.1 `BrandGradientAccent` extensions
+
+`BrandGradientAccent` (`frontend/src/shared/components/common/BrandGradientAccent.tsx`) is reused everywhere below instead of inventing a second gradient mechanism. It needs two small additive prop extensions to cover the new placements (both are backward-compatible — every existing call site, including Hero's current usage and the `subtle` usage behind `AuthLayout`/`DashboardShell`, continues to work unmodified):
+
+**1. New `intensity="whisper"` tier** — for full-bleed washes behind an entire section's background (Services, About, Footer), where even `subtle` is too visible sitting behind body copy and card grids for a sustained scroll distance. Roughly halves `subtle`'s already-halved values:
+
+```
+// Linear layer
+isWhisper: 'from-primary/[0.04] via-primary/[0.015]'
+
+// Radial layer
+isWhisper: 'bg-[radial-gradient(circle_at_50%_-10%,color-mix(in_oklch,var(--color-primary),transparent_94%),transparent_60%)]'
+
+// Stripe layer — opacity-[0.012] (see `layers` below: whisper omits the stripe by default)
+```
+
+**2. New `layers?: Array<'linear' | 'radial' | 'stripe'>` prop**, default `['linear', 'radial', 'stripe']` for `strong`/`subtle` (i.e. unchanged current behavior), default `['linear', 'radial']` for `whisper` (the diagonal stripe reads as visual noise at whisper opacity over large areas / behind text — omit it unless a caller opts back in). This also lets bounded "glow" placements (Pricing's highlighted tier, Contact's form card) request `layers={['radial']}` alone for a soft ambient blob instead of the full 3-layer Hero treatment.
+
+Updated prop table:
+
+| Prop | Values | Notes |
+|---|---|---|
+| `intensity` | `'strong'` \| `'subtle'` (existing) \| `'whisper'` (new) | `strong` = Hero + Pricing highlighted-tier glow. `subtle` = existing AuthLayout/DashboardShell usage, unchanged. `whisper` = new full-section background washes below. |
+| `layers` | `Array<'linear' \| 'radial' \| 'stripe'>`, default per-intensity as above | Lets a caller render only the radial "glass" layer for a compact glow, without pulling in the linear tint or stripe texture meant for large bounded panels. |
+
+No other props change. `className` continues to carry all positioning/sizing/rounding as today.
+
+### 7.2 Navbar (`Navbar.tsx`)
+
+Current: `sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md`.
+
+- Increase glass translucency and blur so the header reads as frosted glass rather than a mostly-opaque bar: change to `bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50`.
+- Replace the neutral `border-border/60` bottom hairline with a brand-tinted one so the header edge picks up the accent instead of a generic gray line: `border-b border-primary/10`, plus a hairline brand shadow for depth once content scrolls beneath it: add `shadow-[0_1px_0_0_rgba(37,99,235,0.05)]`.
+- Combined header className: `sticky top-0 z-50 border-b border-primary/10 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50 shadow-[0_1px_0_0_rgba(37,99,235,0.05)]`.
+- Desktop nav links: add an underline-on-hover micro-interaction for polish — wrap the existing `hover:text-foreground` transition with a 2px animated underline: add `relative after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200 hover:after:scale-x-100` to each nav `<a>`. Purely additive to the existing link classes; no structural change.
+- "Sign up" CTA button in the nav: apply a landing-only glow via `className` on that specific `<Button>` instance (do **not** touch `button.tsx`'s shared `default` variant, since dashboards/auth reuse it) — `className="shadow-[0_1px_2px_rgba(37,99,235,0.15),0_4px_12px_-2px_rgba(37,99,235,0.35)] hover:shadow-[0_1px_2px_rgba(37,99,235,0.2),0_6px_16px_-2px_rgba(37,99,235,0.45)]"`.
+- Mobile drawer background: change flat `bg-card` to `bg-card/95 backdrop-blur-md` so it matches the frosted language established by the header, instead of being a fully opaque panel.
+- Height (`h-16`) and logo size are unchanged.
+
+### 7.3 Hero (`Hero.tsx`)
+
+Hero already carries the `strong` treatment; refine rather than replace:
+
+- Panel height/rounding: increase from `h-[34rem] sm:h-[38rem]` to `h-[38rem] sm:h-[42rem]` and soften the corner from `rounded-b-[3rem]` to `rounded-b-[4rem]` for a more generous, less boxy silhouette.
+- Ring: soften `ring-1 ring-primary/10` to `ring-1 ring-primary/8` now that the panel is taller and the tint alone carries more visual weight.
+- Add a second, smaller `BrandGradientAccent` with `intensity="whisper"` and `layers={['radial']}` positioned at the **bottom** of the Hero panel (e.g. `className="inset-x-0 -bottom-24 -z-10 h-48"`), so the accent doesn't hard-cut at the `rounded-b-[4rem]` edge but fades further into the Services section below it — the connective-tissue transition the reference site achieves and the current implementation currently lacks (Hero's accent stops abruptly at its own bounding box).
+- Eyebrow badge (`Software delivery, without the guesswork`): unchanged structurally; this pattern is good and should be repeated (see §7.4–7.7) as a consistent "eyebrow" convention across every section, not just Hero.
+- H1: increase from `text-4xl leading-10` to `text-5xl leading-[1.1] sm:text-6xl sm:leading-[1.05]` for more presence — still Poppins, only size/leading changes, tracking stays `tracking-tight`.
+- Lead paragraph: bump from `text-base leading-7` to `text-lg leading-8` and widen `max-w-xl` to `max-w-2xl` to match the larger H1 without feeling cramped.
+- Product-preview panel: replace the flat `ring-1 ring-foreground/10` with a floating-surface treatment consistent with §1.6's shadow scale (this panel is a floating visual on the page background, not an app-shell Card, so it earns a shadow the way `auth`'s Card does per §6): `rounded-xl bg-card p-2 ring-1 ring-foreground/8 shadow-xl`.
+- CTA buttons: give the primary "Get started free" button the same landing-only glow classes specified for the Navbar CTA in §7.2, for visual consistency between the two places a user sees the primary action above the fold.
+
+### 7.4 Services (`Services.tsx`)
+
+Current: flat `bg-background`, plain `Card` grid, no eyebrow, `mt-16` gap.
+
+- Add a `BrandGradientAccent` full-bleed wash so Services doesn't read as a flat white gap between Hero's accent and Pricing's tinted background: `<BrandGradientAccent intensity="whisper" className="inset-x-0 top-0 -z-10 h-[28rem]" />` (top-anchored only, fading out before the section's own content ends — this is the layer that receives Hero's bottom fade from §7.3, so the two blend into one continuous wash rather than two disconnected panels).
+- Add an eyebrow label above the H2, matching Hero's badge convention: `<span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/8 px-4 py-1.5 text-xs font-medium text-primary">Platform</span>` inside the existing `ScrollReveal` wrapper, 16px (`space-4`) above the `<h2>`.
+- H2: bump `text-3xl` to `text-3xl sm:text-4xl` (keep `font-bold tracking-tight`) to match the elevated scale introduced in Hero.
+- Section padding: increase `py-20 sm:py-28` to `py-24 sm:py-32` for more generous vertical rhythm (still within the documented "large marketing sections" precedent of `space-16`/`space-20`).
+- Grid gap: `mt-16` unchanged; card-to-card `gap-6` unchanged (already on-scale).
+- Card treatment (applies to all four service `Card`s — and reused as the standard "elegant card" pattern for Pricing/About below, so it's specified once here): replace the bare `<Card className="h-full">` with `<Card className="h-full border-transparent shadow-sm ring-1 ring-foreground/8 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-primary/15">`. This keeps the existing `Card` component untouched (no shadow by default in the app shell per §1.6/§6) while giving the *landing* instances a resting `shadow-sm` + a lift-and-glow hover state — an elegant, restrained micro-interaction rather than the flat, static card the section has today.
+- Icon tile (`bg-primary/10 text-primary` size-10 rounded-lg): unchanged, already on-brand; optionally increase to `size-11` now that cards read slightly larger with the new padding rhythm — not required.
+
+### 7.5 Pricing (`Pricing.tsx`)
+
+Current: `bg-secondary/40`, three `Card`s, highlighted tier gets `ring-2 ring-primary shadow-lg`.
+
+- Keep `bg-secondary/40` as the section's own tint (it already differentiates Pricing from Services/About), but layer a `whisper` wash on top for continuity with the rest of the page's accent language: `<BrandGradientAccent intensity="whisper" layers={['radial']} className="inset-x-0 top-0 -z-10 h-[24rem]" />`.
+- Add the same eyebrow-label convention as §7.4 above the H2 (copy: e.g. `Pricing`).
+- H2: same `text-3xl sm:text-4xl` bump as Services for consistency.
+- Section padding: same `py-24 sm:py-32` bump as Services.
+- Apply the standard elegant-card treatment from §7.4 (`shadow-sm ring-1 ring-foreground/8 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-primary/15`) to the two non-highlighted tiers.
+- **Highlighted tier ("Studio")** gets its own elevated treatment, since it's the section's single most important conversion surface and the current `ring-2 ring-primary shadow-lg` is close but flat:
+  - Wrap the highlighted `Card` in a positioned container and place a bounded glow behind it: `<BrandGradientAccent intensity="strong" layers={['radial']} className="-inset-4 -z-10 rounded-2xl" />` on a `relative` wrapper around just that card, so the glow bleeds slightly past the card's own edges.
+  - Card className: replace `ring-2 ring-primary shadow-lg` with `ring-2 ring-primary shadow-xl scale-100 lg:scale-105` — the slight desktop-only scale-up is a common, effective SaaS pricing convention for drawing the eye to the recommended tier without changing layout weight on mobile.
+  - "Most popular" badge: replace the flat `bg-primary/10 text-primary` pill with a filled gradient treatment for more visual weight on the one badge in the section that should stand out: `bg-gradient-to-r from-primary to-primary-hover text-primary-foreground` (same pill shape/padding otherwise).
+- Feature-list `Check` icon and copy: unchanged.
+
+### 7.6 About (`About.tsx`)
+
+Current: flat `bg-background`, stats rendered as plain `bg-secondary/60` blocks, no eyebrow.
+
+- Add an eyebrow label above the H2 (copy: e.g. `Our story`), same convention as §7.4/§7.5.
+- H2: same `text-3xl sm:text-4xl` bump.
+- Body copy: bump both paragraphs from `text-base leading-7` to `text-base leading-8` (slightly more generous line-height only, size unchanged — About is read-heavy prose and shouldn't jump to `text-lg` the way Hero's short lead does).
+- Stats blocks: replace the flat `rounded-xl bg-secondary/60 p-6` with the glass-card language used at the top of the page, so the two-column layout doesn't feel like two different design systems stacked together: `rounded-xl bg-card/70 p-6 shadow-sm ring-1 ring-foreground/8 backdrop-blur-sm transition-all duration-300 hover:shadow-md hover:ring-primary/15`. This is the one true "glassmorphism" (translucent + blur) moment on the page outside the Navbar, deliberately used sparingly.
+- Section padding: same `py-24 sm:py-32` bump as Services/Pricing.
+- No full-bleed `BrandGradientAccent` wash needed here — About is intentionally the visual "rest point" of the page between Pricing's glow and Contact's; keeping it accent-free (aside from the glass stat cards) preserves contrast and pacing rather than making every section equally loud.
+
+### 7.7 Contact (`Contact.tsx`)
+
+Current: `bg-secondary/40`, form inside `rounded-xl bg-card p-6 ring-1 ring-foreground/10 sm:p-8`.
+
+- Add the eyebrow-label convention (copy: e.g. `Get in touch`) above the `Let's talk` H2.
+- H2: same `text-3xl sm:text-4xl` bump; keep the section centered as today.
+- Section padding: same `py-24 sm:py-32` bump.
+- Form card: add a bounded glow behind it (this is the page's last conversion moment before the Footer, so it deserves the same accent treatment as Pricing's highlighted tier, at a lower intensity since it's a form, not a pricing pitch): wrap in `relative` and add `<BrandGradientAccent intensity="subtle" layers={['radial']} className="-inset-6 -z-10 rounded-3xl" />`.
+- Card className: `rounded-xl bg-card/95 p-6 shadow-md ring-1 ring-foreground/8 backdrop-blur-sm sm:p-8` — slightly translucent + blurred to pick up the glow behind it (an intentional echo of the Navbar/About glass moments), with `shadow-md` added since, like Hero's product-preview panel, this is a floating surface, not an app-shell `Card` instance.
+- Inputs/textarea/Button inside the form: unchanged (already using the shared `Input`/`Button`/`Alert` components per §2 — no landing-specific override needed here).
+
+### 7.8 Footer (`Footer.tsx`)
+
+Current: `border-t border-border bg-background`, flat two-row layout.
+
+- Replace the flat `border-t border-border` top edge with a brand-tinted gradient seam instead of a plain gray hairline, echoing the Navbar's bottom edge treatment from §7.2 so the page opens and closes with the same accent language: remove `border-t border-border` from the `<footer>` and instead add a 1px gradient div as the first child: `<div className="h-px w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent" />`.
+- Add a very low-intensity full-bleed wash behind the footer for continuity with the rest of the page (this is the page's exit point, so it should feel like part of the same system, not a bare utility strip): `<BrandGradientAccent intensity="whisper" layers={['linear']} className="inset-x-0 bottom-0 -z-10 h-64" />` on a `relative` footer wrapper.
+- Bottom copyright bar: keep `border-t border-border` as-is (this internal divider is fine as a neutral hairline; only the outer/top edge of the Footer gets the brand treatment, to avoid overusing the gradient-seam device).
+- Logo size (`h-14`) and all copy/layout unchanged.
+
+### 7.9 Cross-section rhythm, spacing, and typography summary
+
+Consolidated for quick reference — all values above, gathered in one place:
+
+| Section | Padding (was → now) | H2 scale (was → now) | Eyebrow label added |
+|---|---|---|---|
+| Hero | `py-20 sm:py-28 lg:py-32` (unchanged) | H1 `text-4xl` → `text-5xl sm:text-6xl` | Already present (unchanged) |
+| Services | `py-20 sm:py-28` → `py-24 sm:py-32` | `text-3xl` → `text-3xl sm:text-4xl` | Yes (new) |
+| Pricing | `py-20 sm:py-28` → `py-24 sm:py-32` | `text-3xl` → `text-3xl sm:text-4xl` | Yes (new) |
+| About | `py-20 sm:py-28` → `py-24 sm:py-32` | `text-3xl` → `text-3xl sm:text-4xl` | Yes (new) |
+| Contact | `py-20 sm:py-28` → `py-24 sm:py-32` | `text-3xl` → `text-3xl sm:text-4xl` | Yes (new) |
+| Footer | n/a | n/a | n/a |
+
+**Card elevation pattern** (new landing-only convention, does not change the shared `Card` component's default app-shell behavior of §2.2): resting `shadow-sm ring-1 ring-foreground/8`, hover `shadow-lg ring-primary/15` plus `-translate-y-1`, `transition-all duration-300`. Applied to: Services cards, Pricing non-highlighted tiers, About stat blocks (with the added `bg-card/70 backdrop-blur-sm` glass variant). Pricing's highlighted tier and Contact's form card use the heavier `shadow-xl`/`shadow-md` + bounded-glow variant instead, since they're each a section's single focal surface rather than one of a repeated grid.
+
+**Gradient/glass placement summary** (all via `BrandGradientAccent`, §7.1):
+
+| Placement | `intensity` | `layers` | Purpose |
+|---|---|---|---|
+| Hero top panel | `strong` | all (default) | Existing hero treatment, refined per §7.3 |
+| Hero bottom fade | `whisper` | `['radial']` | New — bleeds Hero's accent into Services |
+| Services background | `whisper` | `['linear','radial']` (default) | New — full-bleed section wash |
+| Pricing background | `whisper` | `['radial']` | New — layered on top of existing `bg-secondary/40` |
+| Pricing highlighted tier | `strong` | `['radial']` | New — bounded glow behind the "Studio" card |
+| Contact form card | `subtle` | `['radial']` | New — bounded glow behind the form |
+| Footer | `whisper` | `['linear']` | New — low-intensity closing wash |
+| About | — | — | Intentionally no accent (glass stat cards only) — pacing "rest point" |
+
+### 7.10 Accessibility notes specific to this section
+
+- All new `BrandGradientAccent` placements remain `aria-hidden="true"` and `pointer-events-none` (inherited from the component, §7.1) — no change needed to the component's own accessibility posture, but do not add interactive content inside any `BrandGradientAccent` instance.
+- Text contrast is unaffected by any change in this section: no text color changes are proposed, and all new background washes stay in the `/[0.01]`–`/[0.08]` opacity range against `--background`/`--card`, well below any threshold that would visibly shift the existing AA-passing pairings documented in §5.
+- The Navbar's `backdrop-blur-xl` + `bg-background/60` change must be checked against the existing `border-primary/10` hairline and nav-link text in a real browser once implemented — translucent headers can occasionally reduce effective contrast if content scrolls directly beneath a link; if any nav link fails contrast against a busy hero background, raise `bg-background/60` to `bg-background/70` rather than removing the blur.
+- New hover/translate micro-interactions (Services/Pricing/About cards, Navbar link underline) must respect `prefers-reduced-motion` consistent with the existing `ScrollReveal`/`motion` usage already in these files — apply the same reduced-motion handling already established for the page's `framer-motion` animations (no new motion library or pattern introduced).

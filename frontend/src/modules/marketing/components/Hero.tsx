@@ -18,7 +18,17 @@ export function Hero() {
       */}
       <BrandGradientAccent
         intensity="strong"
-        className="inset-x-0 top-0 -z-10 h-[34rem] rounded-b-[3rem] ring-1 ring-primary/10 sm:h-[38rem]"
+        className="inset-x-0 top-0 -z-10 h-[38rem] rounded-b-[4rem] ring-1 ring-primary/8 sm:h-[42rem]"
+      />
+      {/*
+        Bottom whisper fade: bleeds the Hero accent past its own rounded
+        bottom edge so it blends into Services' top wash instead of cutting
+        off abruptly.
+      */}
+      <BrandGradientAccent
+        intensity="whisper"
+        layers={['radial']}
+        className="inset-x-0 -bottom-24 -z-10 h-48"
       />
 
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 sm:py-28 lg:px-8 lg:py-32">
@@ -35,7 +45,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="max-w-3xl text-4xl leading-10 font-bold tracking-tight text-foreground"
+          className="max-w-3xl text-5xl leading-[1.1] font-bold tracking-tight text-foreground sm:text-6xl sm:leading-[1.05]"
         >
           One workspace to quote, build, and bill every client project.
         </motion.h1>
@@ -44,7 +54,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="max-w-xl text-base leading-7 text-muted-foreground"
+          className="max-w-2xl text-lg leading-8 text-muted-foreground"
         >
           CodeHaus brings project delivery, quotations, invoicing, and client
           collaboration into a single, elegant platform — built for software
@@ -57,7 +67,11 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="flex flex-col gap-3 sm:flex-row"
         >
-          <Button size="lg" onClick={() => navigate('/register')} className="px-6">
+          <Button
+            size="lg"
+            onClick={() => navigate('/register')}
+            className="px-6 shadow-[0_1px_2px_rgba(37,99,235,0.15),0_4px_12px_-2px_rgba(37,99,235,0.35)] hover:shadow-[0_1px_2px_rgba(37,99,235,0.2),0_6px_16px_-2px_rgba(37,99,235,0.45)]"
+          >
             Get started free
             <ArrowRight data-icon="inline-end" />
           </Button>
@@ -70,7 +84,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.4 }}
-          className="mt-8 w-full max-w-5xl rounded-xl bg-card p-2 ring-1 ring-foreground/10"
+          className="mt-8 w-full max-w-5xl rounded-xl bg-card p-2 shadow-xl ring-1 ring-foreground/8"
         >
           <div className="flex h-72 w-full items-center justify-center rounded-lg bg-secondary text-sm text-muted-foreground sm:h-96">
             Product preview
