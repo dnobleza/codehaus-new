@@ -2,8 +2,10 @@ const logger = require('../utils/logger');
 const { toHttpError } = require('../utils/httpError');
 const { adminStatusUpdateSchema, adminDeclineSchema } = require('../validators/projects.validator');
 const { adminQuotationSchema } = require('../validators/quotations.validator');
+const { updateMilestoneProgressSchema } = require('../validators/milestones.validator');
 const projectsService = require('../services/projects.service');
 const quotationsService = require('../services/quotations.service');
+const projectOverviewService = require('../services/projectOverview.service');
 const TAG = '[ADMIN-PROJECTS-CONTROLLER]';
 
 exports.list = async (req, res, next) => {
@@ -96,6 +98,32 @@ exports.editDraftQuotation = async (req, res, next) => {
     });
     logger.info(`${TAG} Draft quotation ${req.params.quotationId} updated for project ${req.params.id}`);
     res.status(200).json({ success: true, message: 'Draft quotation updated successfully', data: quotation });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
+exports.updateMilestoneProgress = async (req, res, next) => {
+  try {
+    const data = updateMilestoneProgressSchema.parse(req.body);
+    const milestone = await projectOverviewService.updateMilestoneProgress(
+      req.params.id,
+      req.params.milestoneId,
+      data,
+      req.user.id
+    );
+    logger.info(`${TAG} Milestone ${req.params.milestoneId} updated for project ${req.params.id}`);
+    res.status(200).json({ success: true, message: 'Milestone progress updated successfully', data: milestone });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
+exports.generateMilestones = async (req, res, next) => {
+  try {
+    const milestones = await projectOverviewService.generateMilestoneTemplateAdmin(req.params.id);
+    logger.info(`${TAG} Milestone template generated for project ${req.params.id}`);
+    res.status(201).json({ success: true, message: 'Milestone template generated successfully', data: milestones });
   } catch (error) {
     next(toHttpError(error));
   }

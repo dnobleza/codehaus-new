@@ -22,6 +22,8 @@ router.use(verifyAccessToken);
 router.post('/', requireRole('client'), projectsController.create);
 router.get('/', requireRole('client'), projectsController.list);
 router.get('/:id', requireRole('client'), projectsController.getById);
+router.get('/:id/overview', requireRole('client'), projectsController.getOverview);
+router.get('/:id/activity', requireRole('client'), projectsController.getActivity);
 
 router.post('/:id/quotations', requireRole('client'), quotationsController.create);
 router.patch('/:id/quotations/:quotationId/accept', requireRole('client'), quotationsController.accept);

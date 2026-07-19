@@ -1,252 +1,108 @@
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { FolderOpen, ListTodo } from 'lucide-react';
 
-import { Alert } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
-import { formatPHP, toNumber } from '@/shared/utils/currency';
-import { formatTimelineRange } from '@/shared/utils/timeline';
-import type { ApiError } from '@/shared/api/apiClient';
-import { useProject } from '../api/projects.queries';
-import { ProjectStatusStepper } from '../components/ProjectStatusStepper';
-import { useAcceptQuotation, useRejectQuotation } from '@/modules/quotations/api/quotations.queries';
-import { QuotationSummaryCard } from '@/modules/quotations/components/QuotationSummaryCard';
-import { useProjectPayments } from '@/modules/payments/api/payments.queries';
-import { PaymentForm } from '@/modules/payments/components/PaymentForm';
-import { PaymentProofPreview } from '@/modules/payments/components/PaymentProofPreview';
-import { PaymentScheduleCard } from '@/modules/payments/components/PaymentScheduleCard';
+import { useProjectOverview } from '../api/projects.queries';
+import { InvoicesTab } from '../components/InvoicesTab';
+import { ActivityTabPanel } from '../components/overview/ActivityTabPanel';
+import { ComingSoonTabPanel } from '../components/overview/ComingSoonTabPanel';
+import { MilestoneProgressCard } from '../components/overview/MilestoneProgressCard';
+import { OverviewTabPanel } from '../components/overview/OverviewTabPanel';
+import { ProjectOverviewBanner } from '../components/overview/ProjectOverviewBanner';
+import { ProjectOverviewHeader } from '../components/overview/ProjectOverviewHeader';
+import { ProjectTimelineCard } from '../components/overview/ProjectTimelineCard';
 
-const PAYMENT_STATUS_BADGE = {
-  pending: 'neutral',
-  verification: 'warning',
-  verified: 'success',
-  rejected: 'danger',
-} as const;
+const TABS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'timeline', label: 'Timeline' },
+  { value: 'milestones', label: 'Milestones' },
+  { value: 'tasks', label: 'Tasks' },
+  { value: 'files', label: 'Files' },
+  { value: 'activity', label: 'Activity' },
+  { value: 'invoices', label: 'Invoices' },
+] as const;
 
-const PAYMENT_STATUS_LABEL = {
-  pending: 'Pending',
-  verification: 'Under Verification',
-  verified: 'Verified',
-  rejected: 'Rejected — please resubmit',
-} as const;
+type TabValue = (typeof TABS)[number]['value'];
 
 /**
- * Project status/detail page (task brief page 3): status stepper, quotation
- * review + accept/reject once sent, then payment method + proof-of-payment
- * submission once accepted, polling for the admin-driven transitions in
- * between (see `useProject`'s `refetchInterval`).
+ * Project Overview page (stage 3): breadcrumb + header + a 7-tab surface.
+ * Overview/Timeline/Milestones all read off a single `useProjectOverview`
+ * fetch (the task brief's "these are cheap since the data's already
+ * fetched" guidance — one request backs all three tabs' milestone data).
+ * Invoices is the pre-existing quotation-review + proof-of-payment flow,
+ * unchanged in behavior, just relocated under its own tab (see
+ * `InvoicesTab`). Tasks/Files are empty-state placeholders — no backing
+ * data exists for them yet.
  */
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: project, isLoading, isError, refetch } = useProject(id);
-  const { data: payments } = useProjectPayments(id);
-
-  const acceptQuotation = useAcceptQuotation(id ?? '');
-  const rejectQuotation = useRejectQuotation(id ?? '');
+  const { data: overview, isLoading, isError, refetch } = useProjectOverview(id);
+  const [activeTab, setActiveTab] = useState<TabValue>('overview');
 
   if (isLoading) {
     return <LoadingSpinner label="Loading project..." />;
   }
 
-  if (isError || !project) {
+  if (isError || !overview || !id) {
     return <ErrorState description="We couldn't load this project." onRetry={() => refetch()} />;
   }
 
-  const latestQuotation = project.quotations?.[0];
-  const quotationError = (acceptQuotation.error ?? rejectQuotation.error) as ApiError | null;
-
-  const latestPayment = payments?.[0];
-  // Sequence-ordered by the API, so `.find` naturally returns the
-  // lowest-sequence pending row — the same installment the server resolves
-  // "the next pending installment" to when validating a payment submission.
-  const nextPendingInstallment = project.paymentInstallments?.find(
-    (installment) => installment.status === 'pending',
-  );
-  const isFullyPaid = Boolean(project.paymentInstallments?.length) && !nextPendingInstallment;
-  const remainingInstallmentCount =
-    project.paymentInstallments?.filter((installment) => installment.status === 'pending').length ?? 0;
-  const canSubmitPayment =
-    latestQuotation?.status === 'accepted' &&
-    Boolean(nextPendingInstallment) &&
-    (!latestPayment || latestPayment.status !== 'verification');
-
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          to="/client/dashboard/projects"
-          className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to projects
-        </Link>
-        <h1 className="text-2xl font-bold text-foreground">{project.title}</h1>
-        {project.request_details && (
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{project.request_details}</p>
-        )}
-      </div>
+      <ProjectOverviewHeader project={overview.project} />
+      <ProjectOverviewBanner projectId={id} />
 
-      <Card>
-        <CardContent>
-          <ProjectStatusStepper status={project.status_code} />
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)}>
+        <TabsList>
+          {TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {project.status_code === 'cancelled' && project.decline_reason && (
-        <Alert
-          variant="danger"
-          title="This request was declined"
-          description={project.decline_reason}
-        />
-      )}
+        <TabsContent value="overview" className="pt-6">
+          <OverviewTabPanel
+            overview={overview}
+            onViewAllActivity={() => setActiveTab('activity')}
+          />
+        </TabsContent>
 
-      {/* Custom project awaiting an admin-prepared quotation */}
-      {project.package_id === null && !latestQuotation && project.status_code !== 'cancelled' && (
-        <Alert
-          variant="info"
-          title="Your custom quotation is being prepared"
-          description="Our team is reviewing your request and will prepare a tailored quotation for you shortly."
-        />
-      )}
+        <TabsContent value="timeline" className="pt-6">
+          <ProjectTimelineCard milestones={overview.milestones} />
+        </TabsContent>
 
-      {quotationError && (
-        <Alert variant="danger" title="Something went wrong" description={quotationError.message} />
-      )}
+        <TabsContent value="milestones" className="pt-6">
+          <MilestoneProgressCard milestones={overview.milestones} />
+        </TabsContent>
 
-      {latestQuotation && latestQuotation.status === 'draft' && (
-        <Alert
-          variant="info"
-          title="Your quotation is being prepared"
-          description="We're reviewing your request. You'll be able to review and accept your quotation once it's ready."
-        />
-      )}
+        <TabsContent value="tasks" className="pt-6">
+          <ComingSoonTabPanel
+            icon={ListTodo}
+            title="No tasks yet"
+            description="Task tracking for this project isn't available yet — check back soon."
+          />
+        </TabsContent>
 
-      {latestQuotation && latestQuotation.status === 'sent' && (
-        <QuotationSummaryCard
-          quotationNumber={latestQuotation.quotation_number}
-          packageLabel={project.title}
-          basePrice={toNumber(latestQuotation.base_price)}
-          addonLines={(latestQuotation.addons ?? []).map((addon) => ({
-            label: addon.name,
-            amount: addon.priceAtTime,
-          }))}
-          total={toNumber(latestQuotation.total_amount)}
-          timelineLabel={formatTimelineRange(
-            latestQuotation.estimated_timeline_min_days,
-            latestQuotation.estimated_timeline_max_days,
-          )}
-          footer={
-            <>
-              <Button
-                variant="outline"
-                onClick={() => rejectQuotation.mutate(latestQuotation.id)}
-                disabled={acceptQuotation.isPending || rejectQuotation.isPending}
-              >
-                Request Changes
-              </Button>
-              <Button
-                onClick={() => acceptQuotation.mutate(latestQuotation.id)}
-                disabled={acceptQuotation.isPending || rejectQuotation.isPending}
-              >
-                {acceptQuotation.isPending ? 'Accepting...' : 'Accept Quotation'}
-              </Button>
-            </>
-          }
-        />
-      )}
+        <TabsContent value="files" className="pt-6">
+          <ComingSoonTabPanel
+            icon={FolderOpen}
+            title="No files yet"
+            description="Files shared for this project aren't available yet — check back soon."
+          />
+        </TabsContent>
 
-      {latestQuotation && latestQuotation.status === 'rejected' && (
-        <Alert
-          variant="warning"
-          title="You requested changes"
-          description="Our team will follow up with a revised quotation."
-        />
-      )}
+        <TabsContent value="activity" className="pt-6">
+          <ActivityTabPanel projectId={id} />
+        </TabsContent>
 
-      {latestQuotation && latestQuotation.status === 'accepted' && (
-        <Alert
-          variant="success"
-          title="Quotation accepted"
-          description={`You accepted ${latestQuotation.quotation_number} for ${formatPHP(latestQuotation.total_amount)}.`}
-        />
-      )}
-
-      <PaymentScheduleCard installments={project.paymentInstallments} />
-
-      {canSubmitPayment && nextPendingInstallment && (
-        <Card className="mx-auto w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Select a payment method</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {latestPayment?.status === 'rejected' && (
-              <Alert
-                className="mb-4"
-                variant="danger"
-                title="Your previous payment wasn't verified"
-                description="Please double-check your details and resubmit proof of payment."
-              />
-            )}
-            <PaymentForm key={nextPendingInstallment.id} projectId={project.id} installment={nextPendingInstallment} />
-          </CardContent>
-        </Card>
-      )}
-
-      {latestPayment && (
-        <Card className="mx-auto w-full max-w-md">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Payment</CardTitle>
-              <Badge variant={PAYMENT_STATUS_BADGE[latestPayment.status]}>
-                {PAYMENT_STATUS_LABEL[latestPayment.status]}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {isFullyPaid ? (
-              <Alert
-                variant="success"
-                title="Your project has been accepted!"
-                description="We'll be in touch shortly to schedule development."
-              />
-            ) : latestPayment.status === 'verification' ? (
-              <Alert
-                variant="warning"
-                title="Payment under verification"
-                description="We've received your payment and are verifying it. This page updates automatically."
-              />
-            ) : project.status_code === 'accepted' ? (
-              <Alert
-                variant="info"
-                title="Downpayment received"
-                description={`${remainingInstallmentCount} installment${remainingInstallmentCount === 1 ? '' : 's'} remaining. You can submit your next payment below.`}
-              />
-            ) : null}
-            <dl className="grid grid-cols-2 gap-2 text-sm">
-              <dt className="text-muted-foreground">Amount</dt>
-              <dd className="text-right font-medium text-foreground">{formatPHP(latestPayment.amount)}</dd>
-              <dt className="text-muted-foreground">Reference number</dt>
-              <dd className="text-right font-medium text-foreground">
-                {latestPayment.reference_number ?? '—'}
-              </dd>
-            </dl>
-            <PaymentProofPreview proofUrl={latestPayment.proof_of_payment_url} />
-          </CardContent>
-        </Card>
-      )}
-
-      {project.status_code === 'accepted' && !latestPayment && isFullyPaid && (
-        <div className="flex flex-col items-center gap-2 py-8 text-center">
-          <CheckCircle2 className="size-10 text-success" aria-hidden="true" />
-          <p className="text-base font-semibold text-foreground">Your project has been accepted!</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            We'll be in touch shortly to schedule development.
-          </p>
-        </div>
-      )}
+        <TabsContent value="invoices" className="pt-6">
+          <InvoicesTab projectId={id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

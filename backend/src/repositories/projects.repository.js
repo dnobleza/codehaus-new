@@ -3,11 +3,11 @@ const pool = require('../config/database');
 // Raw, parameterized `pg` queries only -- no business logic (see
 // services/projects.service.js).
 
-async function create({ clientId, packageId, title, requestDetails }, db = pool) {
+async function create({ clientId, packageId, title, requestDetails, referenceCode }, db = pool) {
   const { rows } = await db.query(
-    `INSERT INTO projects (client_id, package_id, title, request_details)
-     VALUES ($1,$2,$3,$4) RETURNING *`,
-    [clientId, packageId ?? null, title, requestDetails ?? null]
+    `INSERT INTO projects (client_id, package_id, title, request_details, reference_code)
+     VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+    [clientId, packageId ?? null, title, requestDetails ?? null, referenceCode ?? null]
   );
   return rows[0];
 }

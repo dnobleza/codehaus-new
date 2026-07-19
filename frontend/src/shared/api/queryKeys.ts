@@ -29,16 +29,22 @@ export const queryKeys = {
     all: ['projects'] as const,
     list: (filters?: unknown) => [...queryKeys.projects.all, 'list', filters ?? {}] as const,
     detail: (id: string) => [...queryKeys.projects.all, 'detail', id] as const,
+    // Client-facing "Project Overview" page (GET /projects/:id/overview, GET /projects/:id/activity).
+    overview: (id: string) => [...queryKeys.projects.all, 'overview', id] as const,
+    activity: (id: string) => [...queryKeys.projects.all, 'activity', id] as const,
     // Admin/staff-scoped project queue (GET /admin/projects, GET /admin/projects/:id).
     adminAll: () => [...queryKeys.projects.all, 'admin'] as const,
-    adminList: (filters?: unknown) => [...queryKeys.projects.adminAll(), 'list', filters ?? {}] as const,
+    adminList: (filters?: unknown) =>
+      [...queryKeys.projects.adminAll(), 'list', filters ?? {}] as const,
     adminDetail: (id: string) => [...queryKeys.projects.adminAll(), 'detail', id] as const,
   },
   payments: {
     all: ['payments'] as const,
-    listByProject: (projectId: string) => [...queryKeys.payments.all, 'project', projectId] as const,
+    listByProject: (projectId: string) =>
+      [...queryKeys.payments.all, 'project', projectId] as const,
     // Admin/staff-scoped verification queue (GET /admin/payments).
     adminAll: () => [...queryKeys.payments.all, 'admin'] as const,
-    adminList: (filters?: unknown) => [...queryKeys.payments.adminAll(), 'list', filters ?? {}] as const,
+    adminList: (filters?: unknown) =>
+      [...queryKeys.payments.adminAll(), 'list', filters ?? {}] as const,
   },
 } as const;

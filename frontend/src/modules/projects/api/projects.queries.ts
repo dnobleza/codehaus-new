@@ -1,14 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/shared/api/queryKeys';
 import type { ProjectStatusCode } from '@/shared/types/project.types';
 import { isWaitingOnAdmin } from '../utils/projectStatus';
 import {
   adminProjectsApi,
+  projectOverviewApi,
   projectsApi,
   type CreateProjectPayload,
   type ListProjectsFilters,
 } from './projects.api';
+
+const ACTIVITY_PAGE_SIZE = 20;
 
 /** The authenticated client's own projects (backend scopes every read to `req.user.id`). */
 export function useProjects(filters?: ListProjectsFilters) {
@@ -48,6 +51,45 @@ export function useProject(id: string | undefined) {
       );
       return (status && isWaitingOnAdmin(status)) || hasPendingInstallment ? 8000 : false;
     },
+  });
+}
+
+/**
+ * Project Overview page data (header + all four Overview-tab cards +
+ * Timeline/Milestones tabs, which reuse the same `milestones` array — one
+ * fetch backs all of them, per the task brief's "these are cheap since the
+ * data's already fetched" guidance). No polling: unlike quotation/payment
+ * status, there's no other-party action the client is waiting on here that
+ * would need a live-refresh loop.
+ */
+export function useProjectOverview(id: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.projects.overview(id ?? ''),
+    queryFn: () => projectOverviewApi.getOverview(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+/**
+ * Full paginated activity feed for the Activity tab, cursor-paginated via
+ * `nextCursor`/`before` (see `projectOverviewApi.getActivity`). Uses
+ * TanStack Query's `useInfiniteQuery` (already part of the `@tanstack/
+ * react-query` dependency already in use everywhere else in this file) —
+ * not a new dependency. The Overview tab's "recent activity" preview does
+ * NOT use this hook; it reads straight off `useProjectOverview`'s
+ * `recentActivity` (already capped at ~5 server-side).
+ */
+export function useProjectActivity(id: string | undefined) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.projects.activity(id ?? ''),
+    queryFn: ({ pageParam }) =>
+      projectOverviewApi.getActivity(id as string, {
+        limit: ACTIVITY_PAGE_SIZE,
+        before: pageParam,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: Boolean(id),
   });
 }
 

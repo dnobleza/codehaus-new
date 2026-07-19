@@ -20,4 +20,7 @@ router.post('/:id/quotations', adminProjectsController.createAndSendQuotation);
 router.patch('/:id/quotations/:quotationId', adminProjectsController.editDraftQuotation);
 router.patch('/:id/quotations/:quotationId/send', adminProjectsController.sendDraftQuotation);
 
+router.patch('/:id/milestones/:milestoneId', adminProjectsController.updateMilestoneProgress);
+router.post('/:id/milestones/generate', adminProjectsController.generateMilestones);
+
 module.exports = router;

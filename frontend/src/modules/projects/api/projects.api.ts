@@ -1,6 +1,11 @@
 import { apiClient } from '@/shared/api/apiClient';
 import type { ApiEnvelope } from '@/shared/types/api.types';
 import type { Project, ProjectStatusCode } from '@/shared/types/project.types';
+import type {
+  ListProjectActivityParams,
+  ProjectActivityPage,
+  ProjectOverview,
+} from '@/shared/types/projectOverview.types';
 
 /**
  * camelCase body, matching `backend/src/validators/projects.validator.js`'s
@@ -36,6 +41,35 @@ export const projectsApi = {
 
   async create(payload: CreateProjectPayload): Promise<Project> {
     const response = await apiClient.post<ApiEnvelope<Project>>('/projects', payload);
+    return response.data.data;
+  },
+};
+
+/**
+ * Client-facing "Project Overview" endpoints (`GET /projects/:id/overview`,
+ * `GET /projects/:id/activity`), per `projectOverview.service.js`. Kept as
+ * a separate exported object rather than folded into `projectsApi` since
+ * it's a distinct nested-resource surface with its own presenter shape —
+ * same separation `adminProjectsApi` already uses in this file.
+ */
+export const projectOverviewApi = {
+  async getOverview(id: string): Promise<ProjectOverview> {
+    const response = await apiClient.get<ApiEnvelope<ProjectOverview>>(`/projects/${id}/overview`);
+    return response.data.data;
+  },
+
+  /**
+   * `nextCursor` (from a previous page's response) round-trips straight
+   * back as `before` — see `activity.validator.js`'s comment on the same
+   * mechanism server-side.
+   */
+  async getActivity(id: string, params?: ListProjectActivityParams): Promise<ProjectActivityPage> {
+    const response = await apiClient.get<ApiEnvelope<ProjectActivityPage>>(
+      `/projects/${id}/activity`,
+      {
+        params,
+      },
+    );
     return response.data.data;
   },
 };
