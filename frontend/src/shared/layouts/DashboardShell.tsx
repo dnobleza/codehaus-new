@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 
+import { queryClient } from '@/shared/api/queryClient';
 import { useAuthStore } from '@/shared/store/auth.store';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
+import { useSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
 import type { DashboardNavItem } from './dashboardNav.config';
 
@@ -13,9 +15,10 @@ interface DashboardShellProps {
   roleLabel: string;
 }
 
-const navItemClasses = (isActive: boolean) =>
+const navItemClasses = (isActive: boolean, isCollapsed: boolean) =>
   cn(
     'flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors',
+    isCollapsed && 'justify-center px-0',
     isActive
       ? 'bg-primary/8 text-primary'
       : 'text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40',
@@ -26,8 +29,20 @@ const navItemClasses = (isActive: boolean) =>
  * detection; items without one (modules not built out yet) render as inert
  * disabled buttons — this keeps the still-mock staff/admin dashboards
  * working unchanged while the client sidebar gains real navigation.
+ *
+ * When `isCollapsed` is set (desktop icon-only mode), the label text is
+ * visually hidden but still exposed via `aria-label` so the link/button
+ * remains accessible to assistive tech.
  */
-function SidebarNav({ navItems, onNavigate }: { navItems: DashboardNavItem[]; onNavigate?: () => void }) {
+function SidebarNav({
+  navItems,
+  onNavigate,
+  isCollapsed = false,
+}: {
+  navItems: DashboardNavItem[];
+  onNavigate?: () => void;
+  isCollapsed?: boolean;
+}) {
   const location = useLocation();
 
   return (
@@ -41,11 +56,13 @@ function SidebarNav({ navItems, onNavigate }: { navItems: DashboardNavItem[]; on
               key={item.label}
               to={item.path}
               aria-current={isActive ? 'page' : undefined}
+              aria-label={isCollapsed ? item.label : undefined}
+              title={isCollapsed ? item.label : undefined}
               onClick={onNavigate}
-              className={navItemClasses(isActive)}
+              className={navItemClasses(isActive, isCollapsed)}
             >
               <item.icon className="size-5 shrink-0" aria-hidden="true" />
-              {item.label}
+              {!isCollapsed && item.label}
             </Link>
           );
         }
@@ -55,11 +72,13 @@ function SidebarNav({ navItems, onNavigate }: { navItems: DashboardNavItem[]; on
             key={item.label}
             type="button"
             disabled={item.disabled}
+            aria-label={isCollapsed ? item.label : undefined}
+            title={isCollapsed ? item.label : undefined}
             onClick={onNavigate}
-            className={navItemClasses(false)}
+            className={navItemClasses(false, isCollapsed)}
           >
             <item.icon className="size-5 shrink-0" aria-hidden="true" />
-            {item.label}
+            {!isCollapsed && item.label}
           </button>
         );
       })}
@@ -76,6 +95,7 @@ function SidebarNav({ navItems, onNavigate }: { navItems: DashboardNavItem[]; on
  */
 export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const { isCollapsed: isSidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } = useSidebarCollapsed();
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
   const navigate = useNavigate();
@@ -83,8 +103,13 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
   useEscapeKey(isMobileNavOpen, () => setIsMobileNavOpen(false));
 
   function handleLogout() {
-    // Dashboards are mock-data-only for this phase; logout only clears the
-    // local session rather than calling the real /auth/logout endpoint.
+    // Overview/Milestones/Activity are real DB-backed queries cached by
+    // project id, not user id — without clearing the cache here, switching
+    // accounts in the same tab (e.g. via the browser back button) can render
+    // the previous client's cached project data before the stale query
+    // refetches and 404s. Dashboards still don't call the real
+    // /auth/logout endpoint for this phase.
+    queryClient.clear();
     clearSession();
     navigate('/login');
   }
@@ -99,11 +124,35 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
       </a>
 
       {/* Desktop sidebar */}
-      <aside className="hidden w-[264px] shrink-0 flex-col border-r border-border bg-card lg:flex">
-        <div className="flex h-16 items-center border-b border-border px-6">
-          <span className="text-lg font-bold tracking-tight text-foreground">CodeHaus</span>
+      <aside
+        className={cn(
+          'hidden shrink-0 flex-col border-r border-border bg-card transition-all duration-200 lg:flex',
+          isSidebarCollapsed ? 'w-[68px]' : 'w-[264px]',
+        )}
+      >
+        <div
+          className={cn(
+            'flex h-16 items-center border-b border-border',
+            isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-6',
+          )}
+        >
+          {!isSidebarCollapsed && (
+            <span className="text-lg font-bold tracking-tight text-foreground">CodeHaus</span>
+          )}
+          <button
+            type="button"
+            aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={toggleSidebarCollapsed}
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="size-4" aria-hidden="true" />
+            ) : (
+              <PanelLeftClose className="size-4" aria-hidden="true" />
+            )}
+          </button>
         </div>
-        <SidebarNav navItems={navItems} />
+        <SidebarNav navItems={navItems} isCollapsed={isSidebarCollapsed} />
       </aside>
 
       {/* Mobile drawer */}
