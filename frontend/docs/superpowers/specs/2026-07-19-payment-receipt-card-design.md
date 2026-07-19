@@ -39,7 +39,7 @@ Renders nothing if there's no accepted quotation yet (mirrors current guard in `
 
 ## Changes to `InvoicesTab.tsx`
 
-- Remove the standalone `<PaymentScheduleCard>` render (now nested inside the receipt) and the `latestPayment` Card block (lines ~207-250 in current file).
+- Remove the standalone `<PaymentScheduleCard>` render (now nested inside the receipt) and the `latestPayment` Card block (lines ~207-250 in current file). The 3 conditional status `Alert`s currently inside that Card (fully-paid success, "Payment under verification", "Downpayment received — N installments remaining") are relocated as-is to render directly above `PaymentReceiptCard` — same conditions, same copy, just no longer nested in the removed Card.
 - Remove the `CheckCircle2` icon from the fully-paid/no-payment-row block (lines ~252-259) — keep the "Your project has been accepted!" text, drop the icon.
 - Render `<PaymentReceiptCard project={project} quotation={latestQuotation} payment={latestPayment} />` in their place.
 - Drop the now-unused `PaymentProofPreview` import once nothing else in this file uses it (confirm no other caller before deleting the component file itself — out of scope to delete the component, just stop using it here).
