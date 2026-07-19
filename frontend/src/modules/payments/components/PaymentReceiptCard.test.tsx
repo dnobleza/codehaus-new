@@ -44,7 +44,7 @@ const baseQuotation: Quotation = {
   created_at: '2026-07-01',
   sent_at: '2026-07-01',
   responded_at: '2026-07-01',
-  addons: [{ addonId: 'a1', name: 'Extra Revision', category: 'design', priceAtTime: 5000 }],
+  addons: [{ addonId: 'a1', name: 'Extra Revision', category: 'dashboard', priceAtTime: 5000 }],
 };
 
 const basePayment: Payment = {
@@ -62,7 +62,9 @@ const basePayment: Payment = {
 
 describe('PaymentReceiptCard', () => {
   it('renders nothing when the quotation is not accepted', () => {
-    vi.mocked(usePackage).mockReturnValue({ data: undefined } as ReturnType<typeof usePackage>);
+    vi.mocked(usePackage).mockReturnValue({
+      data: undefined,
+    } as unknown as ReturnType<typeof usePackage>);
 
     const { container } = render(
       <PaymentReceiptCard
@@ -99,7 +101,7 @@ describe('PaymentReceiptCard', () => {
         ],
         features: [],
       },
-    } as ReturnType<typeof usePackage>);
+    } as unknown as ReturnType<typeof usePackage>);
 
     render(
       <PaymentReceiptCard project={baseProject} quotation={baseQuotation} payment={basePayment} />,
@@ -115,7 +117,9 @@ describe('PaymentReceiptCard', () => {
   });
 
   it('hides the pages section for custom projects (no package_id)', () => {
-    vi.mocked(usePackage).mockReturnValue({ data: undefined } as ReturnType<typeof usePackage>);
+    vi.mocked(usePackage).mockReturnValue({
+      data: undefined,
+    } as unknown as ReturnType<typeof usePackage>);
 
     render(
       <PaymentReceiptCard

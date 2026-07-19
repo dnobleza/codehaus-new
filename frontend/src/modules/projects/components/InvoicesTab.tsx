@@ -1,7 +1,4 @@
-import { CheckCircle2 } from 'lucide-react';
-
 import { Alert } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ErrorState } from '@/shared/components/common/ErrorState';
@@ -18,22 +15,7 @@ import {
 import { QuotationSummaryCard } from '@/modules/quotations/components/QuotationSummaryCard';
 import { useProjectPayments } from '@/modules/payments/api/payments.queries';
 import { PaymentForm } from '@/modules/payments/components/PaymentForm';
-import { PaymentProofPreview } from '@/modules/payments/components/PaymentProofPreview';
-import { PaymentScheduleCard } from '@/modules/payments/components/PaymentScheduleCard';
-
-const PAYMENT_STATUS_BADGE = {
-  pending: 'neutral',
-  verification: 'warning',
-  verified: 'success',
-  rejected: 'danger',
-} as const;
-
-const PAYMENT_STATUS_LABEL = {
-  pending: 'Pending',
-  verification: 'Under Verification',
-  verified: 'Verified',
-  rejected: 'Rejected — please resubmit',
-} as const;
+import { PaymentReceiptCard } from '@/modules/payments/components/PaymentReceiptCard';
 
 interface InvoicesTabProps {
   projectId: string;
@@ -179,7 +161,28 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
         />
       )}
 
-      <PaymentScheduleCard installments={project.paymentInstallments} />
+      {latestPayment &&
+        (isFullyPaid ? (
+          <Alert
+            variant="success"
+            title="Your project has been accepted!"
+            description="We'll be in touch shortly to schedule development."
+          />
+        ) : latestPayment.status === 'verification' ? (
+          <Alert
+            variant="warning"
+            title="Payment under verification"
+            description="We've received your payment and are verifying it. This page updates automatically."
+          />
+        ) : project.status_code === 'accepted' ? (
+          <Alert
+            variant="info"
+            title="Downpayment received"
+            description={`${remainingInstallmentCount} installment${remainingInstallmentCount === 1 ? '' : 's'} remaining. You can submit your next payment below.`}
+          />
+        ) : null)}
+
+      <PaymentReceiptCard project={project} quotation={latestQuotation} payment={latestPayment} />
 
       {canSubmitPayment && nextPendingInstallment && (
         <Card className="mx-auto w-full max-w-md">
@@ -204,54 +207,8 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
         </Card>
       )}
 
-      {latestPayment && (
-        <Card className="mx-auto w-full max-w-md">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Payment</CardTitle>
-              <Badge variant={PAYMENT_STATUS_BADGE[latestPayment.status]}>
-                {PAYMENT_STATUS_LABEL[latestPayment.status]}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {isFullyPaid ? (
-              <Alert
-                variant="success"
-                title="Your project has been accepted!"
-                description="We'll be in touch shortly to schedule development."
-              />
-            ) : latestPayment.status === 'verification' ? (
-              <Alert
-                variant="warning"
-                title="Payment under verification"
-                description="We've received your payment and are verifying it. This page updates automatically."
-              />
-            ) : project.status_code === 'accepted' ? (
-              <Alert
-                variant="info"
-                title="Downpayment received"
-                description={`${remainingInstallmentCount} installment${remainingInstallmentCount === 1 ? '' : 's'} remaining. You can submit your next payment below.`}
-              />
-            ) : null}
-            <dl className="grid grid-cols-2 gap-2 text-sm">
-              <dt className="text-muted-foreground">Amount</dt>
-              <dd className="text-right font-medium text-foreground">
-                {formatPHP(latestPayment.amount)}
-              </dd>
-              <dt className="text-muted-foreground">Reference number</dt>
-              <dd className="text-right font-medium text-foreground">
-                {latestPayment.reference_number ?? '—'}
-              </dd>
-            </dl>
-            <PaymentProofPreview proofUrl={latestPayment.proof_of_payment_url} />
-          </CardContent>
-        </Card>
-      )}
-
       {project.status_code === 'accepted' && !latestPayment && isFullyPaid && (
         <div className="flex flex-col items-center gap-2 py-8 text-center">
-          <CheckCircle2 className="size-10 text-success" aria-hidden="true" />
           <p className="text-base font-semibold text-foreground">Your project has been accepted!</p>
           <p className="max-w-sm text-sm text-muted-foreground">
             We'll be in touch shortly to schedule development.
