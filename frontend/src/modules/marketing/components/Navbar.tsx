@@ -6,6 +6,7 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 import { cn } from '@/lib/utils';
+import codehausLogo from '@/assets/codehaus-logo.svg';
 import { NAV_ITEMS } from '../constants';
 
 export function Navbar() {
@@ -24,8 +25,8 @@ export function Navbar() {
         aria-label="Primary"
         className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
       >
-        <a href="#home" className="text-lg font-bold tracking-tight text-foreground">
-          CodeHaus
+        <a href="#home" className="flex items-center">
+          <img src={codehausLogo} alt="CodeHaus" className="h-19 w-auto" />
         </a>
 
         <ul className="hidden items-center gap-8 lg:flex">

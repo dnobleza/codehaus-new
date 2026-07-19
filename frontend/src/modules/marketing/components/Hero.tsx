@@ -3,12 +3,24 @@ import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 
 export function Hero() {
   const navigate = useNavigate();
 
   return (
     <section id="home" className="relative overflow-hidden bg-background">
+      {/*
+        Hero accent treatment: bounded gradient/glass panel behind the
+        headline + CTA only. Base page background stays Alice Blue
+        (--background) everywhere — this decorative layer is intentionally
+        scoped and does not extend across the full section.
+      */}
+      <BrandGradientAccent
+        intensity="strong"
+        className="inset-x-0 top-0 -z-10 h-[34rem] rounded-b-[3rem] ring-1 ring-primary/10 sm:h-[38rem]"
+      />
+
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 sm:py-28 lg:px-8 lg:py-32">
         <motion.span
           initial={{ opacity: 0, y: 12 }}
