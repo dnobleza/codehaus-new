@@ -1,11 +1,19 @@
 import codehausLogo from '@/assets/codehaus-logo.svg';
+import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 import { NAV_ITEMS } from '../constants';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-background">
+    <footer className="relative bg-background">
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+      <BrandGradientAccent
+        intensity="whisper"
+        layers={['linear']}
+        className="inset-x-0 bottom-0 -z-10 h-64"
+      />
+
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
         <div>
           <img src={codehausLogo} alt="CodeHaus" className="h-14 w-auto" />

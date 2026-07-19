@@ -10,6 +10,7 @@ import { useSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsed';
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 import { cn } from '@/lib/utils';
 import codehausLogo from '@/assets/codehaus-logo.svg';
+import codehausIcon from '@/assets/codehaus-icon.svg';
 import type { DashboardNavItem } from './dashboardNav.config';
 
 interface DashboardShellProps {
@@ -145,10 +146,14 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
         <div
           className={cn(
             'flex h-16 items-center border-b border-border',
-            isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-6',
+            isSidebarCollapsed
+              ? 'flex-col justify-center gap-1.5 px-2'
+              : 'justify-between px-6',
           )}
         >
-          {!isSidebarCollapsed && (
+          {isSidebarCollapsed ? (
+            <img src={codehausIcon} alt="CodeHaus" className="size-6" />
+          ) : (
             <img src={codehausLogo} alt="CodeHaus" className="h-16 w-auto" />
           )}
           <button

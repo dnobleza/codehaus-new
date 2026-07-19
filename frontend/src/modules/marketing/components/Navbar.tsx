@@ -20,7 +20,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-primary/10 bg-background/60 shadow-[0_1px_0_0_rgba(37,99,235,0.05)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/50">
       <nav
         aria-label="Primary"
         className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
@@ -34,7 +34,7 @@ export function Navbar() {
             <li key={item.href}>
               <a
                 href={item.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="relative text-sm font-medium text-muted-foreground transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200 hover:text-foreground hover:after:scale-x-100"
               >
                 {item.label}
               </a>
@@ -46,7 +46,12 @@ export function Navbar() {
           <Button variant="ghost" onClick={() => navigate('/login')}>
             Log in
           </Button>
-          <Button onClick={() => navigate('/register')}>Sign up</Button>
+          <Button
+            onClick={() => navigate('/register')}
+            className="shadow-[0_1px_2px_rgba(37,99,235,0.15),0_4px_12px_-2px_rgba(37,99,235,0.35)] hover:shadow-[0_1px_2px_rgba(37,99,235,0.2),0_6px_16px_-2px_rgba(37,99,235,0.45)]"
+          >
+            Sign up
+          </Button>
         </div>
 
         <button
@@ -76,7 +81,7 @@ export function Navbar() {
             <motion.div
               id="mobile-nav-drawer"
               className={cn(
-                'fixed inset-x-0 top-16 z-40 h-[calc(100vh-4rem)] w-full overflow-y-auto bg-card lg:hidden',
+                'fixed inset-x-0 top-16 z-40 h-[calc(100vh-4rem)] w-full overflow-y-auto bg-card/95 backdrop-blur-md lg:hidden',
               )}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}

@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 import { ScrollReveal } from './ScrollReveal';
 
 /**
@@ -20,18 +21,26 @@ export function Contact() {
   }
 
   return (
-    <section id="contact" className="bg-secondary/40 py-20 sm:py-28">
+    <section id="contact" className="bg-secondary/40 py-24 sm:py-32">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Let's talk</h2>
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/30 bg-primary/8 px-4 py-1.5 text-xs font-medium text-primary">
+            Get in touch
+          </span>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Let's talk</h2>
           <p className="mt-4 text-base text-muted-foreground">
             Questions about CodeHaus? Send us a message and our team will get
             back to you within one business day.
           </p>
         </ScrollReveal>
 
-        <ScrollReveal delay={0.1} className="mt-10">
-          <div className="rounded-xl bg-card p-6 ring-1 ring-foreground/10 sm:p-8">
+        <ScrollReveal delay={0.1} className="relative mt-10">
+          <BrandGradientAccent
+            intensity="subtle"
+            layers={['radial']}
+            className="-inset-6 -z-10 rounded-3xl"
+          />
+          <div className="rounded-xl bg-card/95 p-6 shadow-md ring-1 ring-foreground/8 backdrop-blur-sm sm:p-8">
             {submitted ? (
               <Alert
                 variant="success"

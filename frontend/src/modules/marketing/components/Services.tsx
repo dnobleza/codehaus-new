@@ -2,6 +2,7 @@ import { FileText, FolderKanban, MessageSquare, Receipt } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 import { ScrollReveal } from './ScrollReveal';
 
 interface Service {
@@ -39,10 +40,15 @@ const SERVICES: Service[] = [
 
 export function Services() {
   return (
-    <section id="services" className="bg-background py-20 sm:py-28">
+    <section id="services" className="relative bg-background py-24 sm:py-32">
+      <BrandGradientAccent intensity="whisper" className="inset-x-0 top-0 -z-10 h-[28rem]" />
+
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/30 bg-primary/8 px-4 py-1.5 text-xs font-medium text-primary">
+            Platform
+          </span>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Everything your agency needs, in one place
           </h2>
           <p className="mt-4 text-base text-muted-foreground">
@@ -55,7 +61,7 @@ export function Services() {
         <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {SERVICES.map((service, index) => (
             <ScrollReveal key={service.title} delay={index * 0.08}>
-              <Card className="h-full">
+              <Card className="h-full border-transparent shadow-sm ring-1 ring-foreground/8 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-primary/15">
                 <CardHeader>
                   <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <service.icon className="size-5" aria-hidden="true" />
