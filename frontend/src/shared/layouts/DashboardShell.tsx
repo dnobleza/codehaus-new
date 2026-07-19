@@ -7,7 +7,9 @@ import { queryClient } from '@/shared/api/queryClient';
 import { useAuthStore } from '@/shared/store/auth.store';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 import { useSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsed';
+import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 import { cn } from '@/lib/utils';
+import codehausLogo from '@/assets/codehaus-logo.svg';
 import type { DashboardNavItem } from './dashboardNav.config';
 
 interface DashboardShellProps {
@@ -115,7 +117,17 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="relative flex min-h-screen bg-background">
+      {/*
+        Faint app-wide brand accent, same visual language as the marketing
+        Hero but toned down for a data-dense surface — see
+        BrandGradientAccent's "subtle" intensity. Sidebar/header/cards are all
+        opaque (bg-card) and sit on top of this via z-index, so it never
+        touches table/form/card content. Base page background stays Alice
+        Blue (--background) unchanged.
+      */}
+      <BrandGradientAccent className="inset-0 -z-10" />
+
       <a
         href="#dashboard-main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
@@ -137,7 +149,7 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
           )}
         >
           {!isSidebarCollapsed && (
-            <span className="text-lg font-bold tracking-tight text-foreground">CodeHaus</span>
+            <img src={codehausLogo} alt="CodeHaus" className="h-16 w-auto" />
           )}
           <button
             type="button"
@@ -176,7 +188,7 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               <div className="flex h-16 items-center justify-between border-b border-border px-6">
-                <span className="text-lg font-bold tracking-tight text-foreground">CodeHaus</span>
+                <img src={codehausLogo} alt="CodeHaus" className="h-16 w-auto" />
                 <button
                   type="button"
                   aria-label="Close menu"
