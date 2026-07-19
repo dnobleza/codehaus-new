@@ -29,7 +29,6 @@ Thumbs.db
 # Claude local settings
 .claude/settings.local.json
 .claude/agents/
-CLAUDE.md
 
 # Playwright MCP cache and ad-hoc QA screenshots
 .playwright-mcp/
