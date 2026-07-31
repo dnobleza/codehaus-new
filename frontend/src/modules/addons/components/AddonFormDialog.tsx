@@ -96,7 +96,13 @@ export function AddonFormDialog({ open, onOpenChange, addon }: AddonFormDialogPr
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-          {apiError && <Alert variant="danger" title="Couldn't save this add-on" description={apiError.message} />}
+          {apiError && (
+            <Alert
+              variant="danger"
+              title="Couldn't save this add-on"
+              description={apiError.message}
+            />
+          )}
 
           <Select label="Category" error={errors.category?.message} {...register('category')}>
             {ADDON_CATEGORY_OPTIONS.map((option) => (
@@ -117,7 +123,11 @@ export function AddonFormDialog({ open, onOpenChange, addon }: AddonFormDialogPr
             {...register('price')}
           />
 
-          <Textarea label="Description" error={errors.description?.message} {...register('description')} />
+          <Textarea
+            label="Description"
+            error={errors.description?.message}
+            {...register('description')}
+          />
 
           <Input
             label="Display order"

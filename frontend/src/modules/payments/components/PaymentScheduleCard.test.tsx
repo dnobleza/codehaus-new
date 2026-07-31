@@ -56,7 +56,9 @@ describe('PaymentScheduleCard', () => {
   });
 
   it('renders nothing in projected mode when the total produced no rows', () => {
-    const { container } = render(<PaymentScheduleCard projected={computeProjectedInstallments(0)} />);
+    const { container } = render(
+      <PaymentScheduleCard projected={computeProjectedInstallments(0)} />,
+    );
 
     expect(container).toBeEmptyDOMElement();
   });

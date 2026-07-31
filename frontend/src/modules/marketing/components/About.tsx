@@ -11,7 +11,7 @@ export function About() {
     <section id="about" className="bg-background py-24 sm:py-32">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         <ScrollReveal>
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground shadow-[var(--clay-shadow-press)]">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
             Our story
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">

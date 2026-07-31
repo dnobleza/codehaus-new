@@ -55,7 +55,12 @@ function SheetContent({
 }
 
 function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div className={cn('flex flex-col gap-1 border-b border-border pb-4 pr-6', className)} {...props} />;
+  return (
+    <div
+      className={cn('flex flex-col gap-1 border-b border-border pb-4 pr-6', className)}
+      {...props}
+    />
+  );
 }
 
 function SheetBody({ className, ...props }: React.ComponentProps<'div'>) {

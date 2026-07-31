@@ -29,7 +29,11 @@ export function GlowOrb({ className, color = 'primary' }: GlowOrbProps) {
   return (
     <div
       aria-hidden="true"
-      className={cn('pointer-events-none absolute rounded-full blur-3xl', COLOR_CLASS[color], className)}
+      className={cn(
+        'pointer-events-none absolute rounded-full blur-3xl',
+        COLOR_CLASS[color],
+        className,
+      )}
     />
   );
 }

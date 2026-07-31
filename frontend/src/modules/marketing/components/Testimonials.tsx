@@ -48,7 +48,7 @@ export function Testimonials() {
             <Card className="glass-panel glass-clay clay-lift h-full border-glass-border p-2">
               <CardContent className="flex h-full flex-col gap-4">
                 {/* Clay-toned quote mark — decorative glyph, not body text. */}
-                <Quote className="size-7 text-primary" aria-hidden="true" />
+                <Quote className="size-7 text-primary-text" aria-hidden="true" />
                 <p className="flex-1 text-sm leading-6 text-foreground">"{testimonial.quote}"</p>
                 <div className="flex items-center gap-3 border-t border-glass-border pt-4">
                   <span className="clay-surface flex size-10 items-center justify-center rounded-full bg-primary/70 text-xs font-semibold text-foreground">

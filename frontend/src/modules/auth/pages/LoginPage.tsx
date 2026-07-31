@@ -32,6 +32,10 @@ export function LoginPage() {
     });
   }
 
+  function onInvalid() {
+    loginMutation.reset();
+  }
+
   const apiError = loginMutation.error as ApiError | null;
 
   return (
@@ -50,7 +54,11 @@ export function LoginPage() {
           />
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit, onInvalid)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <Input
             label="Email"
             type="email"
@@ -73,7 +81,7 @@ export function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Don't have an account?{' '}
-          <Link to="/register" className="font-medium text-primary hover:underline">
+          <Link to="/register" className="font-medium text-primary-text hover:underline">
             Sign up
           </Link>
         </p>

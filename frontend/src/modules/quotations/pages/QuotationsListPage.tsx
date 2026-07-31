@@ -40,7 +40,7 @@ export function QuotationsListPage() {
               accessor: (row) => (
                 <Link
                   to={`/client/dashboard/quotations/${row.project_id}/${row.id}`}
-                  className="font-medium text-foreground hover:text-primary hover:underline"
+                  className="font-medium text-foreground hover:text-primary-text hover:underline"
                 >
                   {row.quotation_number}
                 </Link>

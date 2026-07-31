@@ -21,7 +21,7 @@ export function StatCard({ label, value, icon: Icon, trend }: StatCardProps) {
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="clay-surface flex size-10 items-center justify-center rounded-2xl bg-primary/40 text-primary-text">
             <Icon className="size-5" aria-hidden="true" />
           </div>
           {trend && (

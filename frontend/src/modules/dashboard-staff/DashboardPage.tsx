@@ -44,7 +44,11 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link to="/staff/dashboard/projects" className="block">
-          <StatCard label="Projects awaiting review" value={String(pendingReviewCount)} icon={FolderKanban} />
+          <StatCard
+            label="Projects awaiting review"
+            value={String(pendingReviewCount)}
+            icon={FolderKanban}
+          />
         </Link>
         <Link to="/staff/dashboard/payments" className="block">
           <StatCard

@@ -10,7 +10,10 @@ import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
 import { useAuthStore } from '@/shared/store/auth.store';
 import { useProjects } from '@/modules/projects/api/projects.queries';
-import { PROJECT_STATUS_BADGE_VARIANT, PROJECT_STATUS_LABELS } from '@/modules/projects/utils/projectStatus';
+import {
+  PROJECT_STATUS_BADGE_VARIANT,
+  PROJECT_STATUS_LABELS,
+} from '@/modules/projects/utils/projectStatus';
 import type { ProjectStatusCode } from '@/shared/types/project.types';
 
 const TERMINAL_STATUSES: ProjectStatusCode[] = ['completed', 'cancelled'];
@@ -60,7 +63,11 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard label="Active projects" value={String(activeProjectsCount)} icon={FolderKanban} />
-        <StatCard label="Needs your attention" value={String(needsAttention.length)} icon={ShieldAlert} />
+        <StatCard
+          label="Needs your attention"
+          value={String(needsAttention.length)}
+          icon={ShieldAlert}
+        />
       </div>
 
       <div>
@@ -77,7 +84,7 @@ export function DashboardPage() {
                 accessor: (row) => (
                   <Link
                     to={`/client/dashboard/projects/${row.id}`}
-                    className="font-medium text-foreground hover:text-primary hover:underline"
+                    className="font-medium text-foreground hover:text-primary-text hover:underline"
                   >
                     {row.title}
                   </Link>

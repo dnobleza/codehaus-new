@@ -44,7 +44,7 @@ export function Workflow() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground shadow-[var(--clay-shadow-press)]">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
             How it works
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">

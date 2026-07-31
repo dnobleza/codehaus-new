@@ -53,7 +53,7 @@ const SERVICES: Service[] = [
 function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
   if (kind === 'progress') {
     return (
-      <div className="flex flex-col gap-2 rounded-2xl bg-secondary/60 p-3 shadow-[var(--clay-shadow-press)]">
+      <div className="flex flex-col gap-2 rounded-2xl bg-secondary/60 p-3 clay-depth-press">
         {[
           { label: 'Storefront revamp', value: 80 },
           { label: 'Mobile app v2', value: 45 },
@@ -75,7 +75,7 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
   if (kind === 'chart') {
     const bars = [40, 65, 50, 85, 60];
     return (
-      <div className="flex h-16 items-end gap-1.5 rounded-2xl bg-secondary/60 p-3 shadow-[var(--clay-shadow-press)]">
+      <div className="flex h-16 items-end gap-1.5 rounded-2xl bg-secondary/60 p-3 clay-depth-press">
         {bars.map((height, index) => (
           <div
             key={index}
@@ -89,7 +89,7 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
 
   if (kind === 'invoice') {
     return (
-      <div className="flex flex-col gap-2 rounded-2xl bg-secondary/60 p-3 shadow-[var(--clay-shadow-press)]">
+      <div className="flex flex-col gap-2 rounded-2xl bg-secondary/60 p-3 clay-depth-press">
         <div className="flex items-center justify-between text-[11px]">
           <span className="font-medium text-foreground">Invoice #1042</span>
           <span className="rounded-full bg-success/10 px-2 py-0.5 text-[9px] font-medium text-success">
@@ -105,7 +105,7 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
   }
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-2xl bg-secondary/60 p-3 shadow-[var(--clay-shadow-press)]">
+    <div className="flex flex-col gap-1.5 rounded-2xl bg-secondary/60 p-3 clay-depth-press">
       <div className="max-w-[80%] rounded-lg rounded-bl-sm bg-card px-2.5 py-1.5 text-[10px] text-foreground shadow-sm">
         Quote looks great, approving now.
       </div>
@@ -127,7 +127,7 @@ export function Services() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground shadow-[var(--clay-shadow-press)]">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
             Platform
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">

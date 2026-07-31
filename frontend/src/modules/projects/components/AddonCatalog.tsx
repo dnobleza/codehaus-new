@@ -79,16 +79,20 @@ export function AddonCatalog({ addons, selectedIds, onToggle }: AddonCatalogProp
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => onToggle(addon.id)}
-                          className="mt-0.5 size-4 shrink-0 rounded border-input text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+                          className="mt-0.5 size-4 shrink-0 rounded border-input text-primary-text focus-visible:ring-3 focus-visible:ring-ring/50"
                         />
                         <span className="flex flex-col">
                           <span className="font-medium text-foreground">{addon.name}</span>
                           {addon.description && (
-                            <span className="text-xs text-muted-foreground">{addon.description}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {addon.description}
+                            </span>
                           )}
                         </span>
                       </span>
-                      <span className="shrink-0 font-medium text-foreground">{formatPHP(addon.price)}</span>
+                      <span className="shrink-0 font-medium text-foreground">
+                        {formatPHP(addon.price)}
+                      </span>
                     </label>
                   );
                 })}

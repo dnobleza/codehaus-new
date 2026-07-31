@@ -47,6 +47,10 @@ export function RegisterPage() {
     );
   }
 
+  function onInvalid() {
+    registerMutation.reset();
+  }
+
   const apiError = registerMutation.error as ApiError | null;
 
   return (
@@ -65,7 +69,11 @@ export function RegisterPage() {
           />
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit, onInvalid)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Input
               label="First name"
@@ -121,19 +129,14 @@ export function RegisterPage() {
             />
           </div>
 
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full"
-            disabled={registerMutation.isPending}
-          >
+          <Button type="submit" size="lg" className="w-full" disabled={registerMutation.isPending}>
             {registerMutation.isPending ? 'Creating account...' : 'Create account'}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-primary hover:underline">
+          <Link to="/login" className="font-medium text-primary-text hover:underline">
             Log in
           </Link>
         </p>

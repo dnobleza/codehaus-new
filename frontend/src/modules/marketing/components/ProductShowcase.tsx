@@ -84,7 +84,7 @@ const WIDGETS: FloatingWidget[] = [
 ];
 
 const TONE_CLASS: Record<FloatingWidget['tone'], string> = {
-  primary: 'bg-primary/10 text-primary',
+  primary: 'bg-primary/10 text-primary-text',
   success: 'bg-success/10 text-success',
   accent: 'bg-accent/10 text-accent',
 };

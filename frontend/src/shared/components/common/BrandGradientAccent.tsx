@@ -47,14 +47,22 @@ interface BrandGradientAccentProps {
  * `AuthLayout` and `DashboardShell` at a toned-down `intensity` so the brand
  * treatment is consistent app-wide without duplicating this markup.
  */
-export function BrandGradientAccent({ className, intensity = 'subtle', layers }: BrandGradientAccentProps) {
+export function BrandGradientAccent({
+  className,
+  intensity = 'subtle',
+  layers,
+}: BrandGradientAccentProps) {
   const isStrong = intensity === 'strong';
   const isWhisper = intensity === 'whisper';
 
-  const activeLayers = layers ?? (isWhisper ? ['linear', 'radial'] : ['linear', 'radial', 'stripe']);
+  const activeLayers =
+    layers ?? (isWhisper ? ['linear', 'radial'] : ['linear', 'radial', 'stripe']);
 
   return (
-    <div aria-hidden="true" className={cn('pointer-events-none absolute overflow-hidden', className)}>
+    <div
+      aria-hidden="true"
+      className={cn('pointer-events-none absolute overflow-hidden', className)}
+    >
       {/* Linear gradient: lighter to darker tint of brand blue */}
       {activeLayers.includes('linear') && (
         <div
@@ -92,9 +100,7 @@ export function BrandGradientAccent({ className, intensity = 'subtle', layers }:
       )}
       {/* Faint graph-paper grid texture — opt-in only, landing v2 (§7.11) */}
       {activeLayers.includes('grid') && (
-        <div
-          className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(var(--color-foreground)_1px,transparent_1px),linear-gradient(90deg,var(--color-foreground)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent_70%)]"
-        />
+        <div className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(var(--color-foreground)_1px,transparent_1px),linear-gradient(90deg,var(--color-foreground)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent_70%)]" />
       )}
     </div>
   );

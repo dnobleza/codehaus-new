@@ -70,7 +70,7 @@ export function Pricing() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground shadow-[var(--clay-shadow-press)]">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
             Pricing
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -102,7 +102,7 @@ export function Pricing() {
                   // shadow rather than a colored ring (§7.6) — depth is this
                   // palette's hierarchy tool, not saturation.
                   tier.highlighted
-                    ? 'scale-100 shadow-[var(--clay-shadow-hover)] lg:scale-105'
+                    ? 'scale-100 clay-depth-hover lg:scale-105'
                     : 'glass-clay clay-lift',
                 )}
               >
@@ -123,7 +123,10 @@ export function Pricing() {
                   <ul className="flex flex-col gap-3">
                     {tier.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-2 text-sm text-foreground">
-                        <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                        <Check
+                          className="mt-0.5 size-4 shrink-0 text-primary-text"
+                          aria-hidden="true"
+                        />
                         {feature}
                       </li>
                     ))}

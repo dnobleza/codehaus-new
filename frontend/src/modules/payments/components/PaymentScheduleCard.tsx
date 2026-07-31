@@ -204,7 +204,9 @@ export function PaymentScheduleCard(props: PaymentScheduleCardProps) {
                     {toNumber(row.percentage)}%
                   </dd>
                   <dt className="text-xs text-muted-foreground">Amount</dt>
-                  <dd className="text-right font-medium text-foreground">{formatPHP(row.amount)}</dd>
+                  <dd className="text-right font-medium text-foreground">
+                    {formatPHP(row.amount)}
+                  </dd>
                   <dt className="text-xs text-muted-foreground">Due date</dt>
                   <dd className="text-right font-medium text-foreground">
                     {isProjected

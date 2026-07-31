@@ -91,7 +91,11 @@ export function PaymentForm({ projectId, installment, onSubmitted }: PaymentForm
       </p>
 
       {apiError && (
-        <Alert variant="danger" title="Couldn't submit your payment" description={apiError.message} />
+        <Alert
+          variant="danger"
+          title="Couldn't submit your payment"
+          description={apiError.message}
+        />
       )}
 
       <Controller
@@ -110,7 +114,9 @@ export function PaymentForm({ projectId, installment, onSubmitted }: PaymentForm
                     htmlFor={inputId}
                     className={cn(
                       'flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors',
-                      isChecked ? 'border-primary bg-primary/5 text-primary' : 'border-input hover:bg-muted',
+                      isChecked
+                        ? 'border-primary bg-primary/5 text-primary-text'
+                        : 'border-input hover:bg-muted',
                     )}
                   >
                     <input
@@ -121,7 +127,7 @@ export function PaymentForm({ projectId, installment, onSubmitted }: PaymentForm
                       checked={isChecked}
                       onChange={() => field.onChange(option.value)}
                       onBlur={field.onBlur}
-                      className="size-4 shrink-0 text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="size-4 shrink-0 text-primary-text focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                     <span className="font-medium">{option.label}</span>
                   </label>

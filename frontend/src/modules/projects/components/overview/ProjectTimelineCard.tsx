@@ -67,7 +67,7 @@ export function ProjectTimelineCard({ milestones, className }: ProjectTimelineCa
 
                   {milestone.status === 'in_progress' && milestone.currentFocus && (
                     <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 p-3">
-                      <p className="text-xs font-semibold text-primary">Current Focus</p>
+                      <p className="text-xs font-semibold text-primary-text">Current Focus</p>
                       <p className="mt-1 text-sm text-foreground">{milestone.currentFocus}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {milestone.progressPercent}% complete

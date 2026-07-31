@@ -4,7 +4,10 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const inputVariants = cva(
-  'flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground hover:border-border focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 disabled:bg-muted aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20',
+  // Clay field: pressed-in inset over a warm surface rather than a hard
+  // outline (design-system.md §7.20). The border is kept (transparent) so
+  // focus/invalid states can still colour it without shifting layout.
+  'flex w-full rounded-xl border border-transparent bg-secondary/50 px-3 py-2 text-sm text-foreground clay-depth-press outline-none transition-all placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 disabled:bg-muted aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20',
   {
     variants: {
       inputSize: {
@@ -19,8 +22,7 @@ const inputVariants = cva(
 );
 
 export interface InputProps
-  extends Omit<React.ComponentProps<'input'>, 'size'>,
-    VariantProps<typeof inputVariants> {
+  extends Omit<React.ComponentProps<'input'>, 'size'>, VariantProps<typeof inputVariants> {
   label?: string;
   helperText?: string;
   error?: string;

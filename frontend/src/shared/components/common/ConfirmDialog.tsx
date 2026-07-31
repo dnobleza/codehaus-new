@@ -49,7 +49,9 @@ export function ConfirmDialog({
             {cancelLabel}
           </Button>
           <Button
-            className={isDestructive ? 'bg-destructive text-white hover:bg-destructive/90' : undefined}
+            className={
+              isDestructive ? 'bg-destructive text-white hover:bg-destructive/90' : undefined
+            }
             onClick={onConfirm}
             disabled={isConfirming}
           >

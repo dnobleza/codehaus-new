@@ -9,12 +9,12 @@ import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAcc
 import { ScrollReveal } from './ScrollReveal';
 
 /**
- * Clay field treatment (§7.20): pressed-in inset instead of a hard border.
- * Applied at these call sites rather than to the shared `Input`/textarea
- * primitives, which are used by app forms that must stay on the blue theme.
+ * The shared `Input` primitive now carries the clay field treatment app-wide
+ * (§7.20), so only the bare `<textarea>` below — which isn't an `Input` —
+ * needs the classes spelled out.
  */
 const CLAY_FIELD_CLASS =
-  'rounded-2xl border-transparent bg-secondary/50 px-4 py-3 shadow-[var(--clay-shadow-press)] hover:border-transparent';
+  'rounded-xl border border-transparent bg-secondary/50 px-4 py-3 clay-depth-press';
 
 /**
  * UI-only contact form per the brief — does not submit anywhere real yet.
@@ -36,7 +36,7 @@ export function Contact() {
     <section id="contact" className="overflow-x-clip bg-secondary/40 py-24 sm:py-32">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground shadow-[var(--clay-shadow-press)]">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
             Get in touch
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -69,7 +69,7 @@ export function Contact() {
                     name="name"
                     placeholder="Ada Lovelace"
                     required
-                    className={cn('h-12', CLAY_FIELD_CLASS)}
+                    className="h-12 px-4"
                   />
                   <Input
                     label="Email"
@@ -77,7 +77,7 @@ export function Contact() {
                     type="email"
                     placeholder="ada@example.com"
                     required
-                    className={cn('h-12', CLAY_FIELD_CLASS)}
+                    className="h-12 px-4"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -91,7 +91,7 @@ export function Contact() {
                     required
                     placeholder="Tell us about your team and what you're looking for."
                     className={cn(
-                      'w-full border text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+                      'w-full text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
                       CLAY_FIELD_CLASS,
                     )}
                   />

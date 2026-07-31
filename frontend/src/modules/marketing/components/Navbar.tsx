@@ -103,7 +103,7 @@ export function Navbar() {
                     <a
                       href={item.href}
                       onClick={handleNavClick}
-                      className="block rounded-2xl px-4 py-3 text-base font-medium text-foreground transition-shadow duration-200 hover:bg-secondary/60 hover:shadow-[var(--clay-shadow-press)]"
+                      className="block rounded-2xl px-4 py-3 text-base font-medium text-foreground transition-shadow duration-200 hover:bg-secondary/60 hover:clay-depth-press"
                     >
                       {item.label}
                     </a>

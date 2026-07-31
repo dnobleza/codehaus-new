@@ -29,10 +29,18 @@ import { useCreateProject } from '../api/projects.queries';
  */
 export function NewProjectPage() {
   const navigate = useNavigate();
-  const { data: packages, isLoading: isLoadingPackages, isError: isPackagesError, refetch: refetchPackages } =
-    usePackages();
-  const { data: addons, isLoading: isLoadingAddons, isError: isAddonsError, refetch: refetchAddons } =
-    useAddons();
+  const {
+    data: packages,
+    isLoading: isLoadingPackages,
+    isError: isPackagesError,
+    refetch: refetchPackages,
+  } = usePackages();
+  const {
+    data: addons,
+    isLoading: isLoadingAddons,
+    isError: isAddonsError,
+    refetch: refetchAddons,
+  } = useAddons();
 
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(new Set());
@@ -52,7 +60,10 @@ export function NewProjectPage() {
   const addonsTotal = selectedAddons.reduce((sum, addon) => sum + toNumber(addon.price), 0);
   const total = basePrice + addonsTotal;
   const timelineLabel = selectedPackage
-    ? formatTimelineRange(selectedPackage.estimated_timeline_min_days, selectedPackage.estimated_timeline_max_days)
+    ? formatTimelineRange(
+        selectedPackage.estimated_timeline_min_days,
+        selectedPackage.estimated_timeline_max_days,
+      )
     : null;
 
   function toggleAddon(addonId: string) {
@@ -64,7 +75,8 @@ export function NewProjectPage() {
     });
   }
 
-  const titleError = titleTouched && title.trim().length === 0 ? 'Project title is required' : undefined;
+  const titleError =
+    titleTouched && title.trim().length === 0 ? 'Project title is required' : undefined;
   const isSubmitting = createProject.isPending || createQuotation.isPending;
   const submitError = (createProject.error ?? createQuotation.error) as ApiError | null;
 
@@ -155,7 +167,9 @@ export function NewProjectPage() {
               />
               <div className="flex flex-col gap-1">
                 <label htmlFor="request-details" className="text-sm font-medium text-foreground">
-                  {selectedPackage.is_custom ? 'Describe what you need' : 'Additional details (optional)'}
+                  {selectedPackage.is_custom
+                    ? 'Describe what you need'
+                    : 'Additional details (optional)'}
                 </label>
                 <textarea
                   id="request-details"
@@ -211,7 +225,12 @@ export function NewProjectPage() {
                 total={total}
                 timelineLabel={timelineLabel}
                 footer={
-                  <Button className="w-full" size="lg" onClick={handleSubmit} disabled={isSubmitting}>
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                  >
                     {isSubmitting ? 'Submitting...' : 'Submit Request'}
                   </Button>
                 }

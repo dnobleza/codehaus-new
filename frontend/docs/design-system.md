@@ -22,6 +22,36 @@ Scope: documentation only. No implementation code is included. All values below 
 
 ### 1.1 Color Palette
 
+> ## v2.0 — Clay + glass palette (current, authoritative)
+>
+> The brand-blue system documented in the rest of §1.1 was **replaced app-wide** by the claymorphic + glassmorphic palette: landing page, auth, and all three dashboards. Everything below this box describes the previous blue system and is retained only as history — do not build against it. The material system (shadows, frosted surfaces, the four utilities) is specified in **§7.20**.
+>
+> | Role | Value | Token |
+> |---|---|---|
+> | Page background | `#faf8f3` (soft cream) | `--background` |
+> | Card / modal / popover surface | `#fffdf9` | `--card` |
+> | Body & heading text | `#2a2a2a` | `--foreground` |
+> | Secondary / muted text | `#6b5d4f` (warm gray-brown) | `--muted-foreground` |
+> | Accent **fill** | `#d4a574` (warm clay) | `--primary` |
+> | Accent fill, hover | `#c99a6e` | `--primary-hover` |
+> | Text on accent fill | `#2a2a2a` (**dark**, not white) | `--primary-foreground` |
+> | Accent **text** | `#8a5a2b` (deep clay) | `--primary-text` |
+> | Borders, dividers, inputs | `#e6dccd` | `--border` / `--input` |
+> | Secondary / muted surface | `#f2ece2` | `--secondary` / `--muted` |
+> | Focus ring | `#a67c52` | `--ring` |
+> | Cool glass tint | `#e8f4f8` | `--accent` |
+> | Dark decorative chrome | `#3a2f26` (warm dark) | `--brand-ink` |
+>
+> **The two-accent rule.** `--primary` is a **fill** color and `--primary-text` is a **text** color; they are not interchangeable. Clay at `#d4a574` measures **2.10:1** on the cream background — it cannot legally carry text, icons, or links. Anywhere the accent must be readable (active nav item, inline links, tab underlines, meaningful icons) uses `--primary-text` / the `text-primary-text` utility: **5.53:1** on `--background`, **5.78:1** on `--card`. Using `text-primary` for text is a bug.
+>
+> Measured contrast: body text on background **13.52:1**; button labels on clay **6.45:1** (white on clay would be 2.23:1 and fail).
+>
+> **Status colors are deliberately not warmed.** `--success`, `--warning`, `--info`, and `--destructive` keep their conventional hues — they carry meaning and must stay recognizable and mutually distinguishable (§5).
+
+---
+
+**Historical (v1.x, brand blue) — superseded by the box above.**
+
 CodeHaus already has a partial token implementation in `frontend/src/index.css` (Tailwind v4 `@theme inline`, shadcn/ui pattern, using `oklch()` values). The brand specification defines canonical hex values for the same semantic roles. Where both exist, **the hex value is canonical for design work**; the table below states the hex value, the CSS custom property it maps to, the property's current implemented value, and whether the two agree.
 
 | Role | Canonical brand hex | Maps to CSS var | Current CSS value | Reconciliation status |
@@ -802,11 +832,17 @@ The landing page's material language. Two materials, one page: **clay** supplies
 
 Structure, section order, and every motion spec in §7.11–§7.19 are unchanged — this pass changed color and material only.
 
-#### Scoping — how it stays off the app
+#### Scope — app-wide
 
-The palette lives in a **`.theme-clay` class**, not `:root` (`frontend/src/index.css`). `LandingLayout.tsx` applies it to the marketing shell's root element, so the clay tokens cascade over the entire landing page and nowhere else. Every authenticated surface — dashboards, auth, tables, badges — keeps the brand-blue tokens from §1.1 untouched.
+The palette lives at **`:root`** in `frontend/src/index.css`. It applies to every surface: landing page, auth, and the client, staff, and admin dashboards. (It was briefly scoped to a `.theme-clay` class on the marketing shell; that scoping was removed when the treatment was adopted app-wide.)
 
-The leverage this buys: `BrandGradientAccent` and `GlowOrb` are built from `--color-primary` / `--color-accent` rather than literal colors, so **both re-tint automatically and neither file was modified**. The same is true of every `bg-primary`, `ring-primary/15`, and `text-accent` utility already on the page.
+The leverage this buys: `BrandGradientAccent` and `GlowOrb` are built from `--color-primary` / `--color-accent` rather than literal colors, so **both re-tint automatically and neither file was modified**. The same is true of every `bg-primary`, `ring-primary/15`, and `bg-card` utility across the product — which is why an app-wide reskin needed almost no per-page color edits.
+
+#### Where each material is used
+
+- **Clay** is the default depth for cards (`Card` carries `clay-depth` in its base classes), buttons, inputs (pressed-in inset), icon pucks, and the active sidebar item.
+- **Glass** is reserved for *chrome*: the landing header and footer, the auth card, the dashboard sidebar and topbar, the mobile drawer, and floating widgets.
+- **Data surfaces stay opaque.** Cards and tables inside dashboard `main` keep `bg-card`. Backdrop blur behind dense data hurts legibility and costs GPU on long scrolls.
 
 When adding to the landing page, prefer a token or one of the four utilities below over a hardcoded color — a literal `rgba()` will not follow the theme, which is exactly the bug this pass removed from five call sites.
 
@@ -852,11 +888,16 @@ Clay depth is three shadows, not one: a warm shadow on one corner, a white count
 | `.glass-clay` | Clay shadow on a glass fill — **the blend** | Every card: features, testimonials, pricing, stats |
 | `.clay-lift` | Hover: `--clay-shadow-hover` + `-4px` rise. Active: `--clay-shadow-press` | Anything interactive |
 
-Two implementation details worth knowing before you use them:
+Plus three depth utilities declared with `@utility` — `clay-depth`, `clay-depth-hover`, `clay-depth-press` — which set `box-shadow` directly.
 
+Four implementation details worth knowing before you use any of them. Each of these was a real bug caught in the browser, not a hypothetical:
+
+- **Use `clay-depth`, never `shadow-[var(--clay-shadow)]`.** The arbitrary-value form feeds a multi-shadow value through Tailwind's `--tw-shadow` scaffold and composes to *nothing* — the element silently renders with no shadow.
+- **Cascade layers outrank specificity.** A rule in `@layer components` loses to *any* utility, however specific. That's why the four material classes are declared in `@layer utilities` with doubled selectors (`.glass-panel.glass-panel`): same layer, higher specificity, so they beat the `bg-card` already on `Card`. In `components` they lost their `background-color` entirely and cards rendered opaque.
+- **`@utility`, not `@layer utilities`, for anything needing a variant.** A plain class in `@layer utilities` gets no `hover:` / `active:` support in Tailwind v4.
 - `.clay-surface`'s sheen is **translucent**, not an opaque cream gradient, so it composites over whatever `background-color` you set. That's what lets a clay CTA (`bg-primary`) and a cream card share one class.
-- `.glass-panel`'s sheen is an absolutely-positioned `::before`, so `.glass-panel > *` is lifted to `z-index: 1`. Direct children paint above the sheen; deeper content inherits normally.
-- Button's base `rounded-lg` is a *utility* and beats `.clay-surface`'s radius (components layer loses to utilities). State the radius explicitly on buttons — the page uses `rounded-full`.
+- `.glass-panel`'s sheen is an absolutely-positioned `::before`, so `.glass-panel > *` is lifted to `z-index: 1`; otherwise it paints over the panel's own text.
+- Button's base `rounded-lg` is a utility of equal specificity, so state the radius explicitly on buttons — the landing page uses `rounded-full`.
 
 #### Contrast rules (non-negotiable)
 
@@ -872,6 +913,6 @@ Focus rings use `--ring` (`#a67c52`), darker than clay, so they stay visible aga
 
 Hover lift is suppressed under `prefers-reduced-motion` while shadows remain — depth is information, movement is decoration. A `@supports not (backdrop-filter: …)` block raises `--glass-bg` to 0.94 so unsupported browsers get a solid warm panel rather than a flat translucent wash over live content.
 
-#### Deliberate exception — `LaptopScreen.tsx`
+#### `LaptopScreen.tsx` — no longer an exception
 
-The dashboard UI inside the laptop mockup **stays brand blue**. It is a depiction of the actual product; warming it to match the marketing page would misrepresent what a customer gets after signing up. It is the one intentional blue surface on the page.
+While the clay palette was landing-only, the dashboard mockup inside the laptop deliberately stayed brand blue so it wouldn't misrepresent the product. Now that the real dashboards are clay, that reasoning inverts: the mockup should match what a customer actually gets. `LaptopScreen` is entirely token-driven with no hardcoded colors, so it re-tinted on its own and needed no edit.
