@@ -4,10 +4,22 @@ import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatPHP, toNumber } from '@/shared/utils/currency';
 import type { PaymentInstallment } from '@/shared/types/payment.types';
+import { formatProjectedDueLabel, type ProjectedInstallment } from '../utils/projectedSchedule';
 
-interface PaymentScheduleCardProps {
-  installments: PaymentInstallment[] | undefined;
-}
+/**
+ * Two mutually exclusive modes, one component:
+ *
+ * - `installments` — the server's real `payment_installments` rows, which
+ *   only exist once a quotation has been accepted. Absolute due dates,
+ *   Paid/Pending/Overdue badges, paid-count footer.
+ * - `projected` — a pre-acceptance preview from
+ *   `computeProjectedInstallments`. Relative due labels (the server anchors
+ *   real dates at acceptance time), no status badges (nothing has a status
+ *   yet), and a total in the footer instead of a paid count.
+ */
+type PaymentScheduleCardProps =
+  | { installments: PaymentInstallment[] | undefined; projected?: never }
+  | { projected: ProjectedInstallment[]; installments?: never };
 
 /**
  * Sequence 1 is always the 50% downpayment; sequences 2-5 are the
@@ -72,17 +84,31 @@ function getStatusPresentation(installment: PaymentInstallment): StatusPresentat
 /**
  * Read-only breakdown of a project's fixed 5-installment payment schedule
  * (50% downpayment, then 20%, then 10% x 3, weekly due dates). Shared
- * between the client and admin project detail pages — deliberately has no
- * role-specific actions or copy, only display. Renders nothing before a
- * quotation has been accepted (no installments exist yet).
+ * between the client and admin project detail pages, and the client's
+ * quotation detail page — deliberately has no role-specific actions or copy,
+ * only display.
+ *
+ * In `installments` (actual) mode it renders the server's rows and renders
+ * nothing before a quotation has been accepted, since no installments exist
+ * yet. In `projected` mode it previews the same schedule for a quotation the
+ * client hasn't accepted, with relative due labels — see the props type above.
  */
-export function PaymentScheduleCard({ installments }: PaymentScheduleCardProps) {
-  if (!installments || installments.length === 0) return null;
+export function PaymentScheduleCard(props: PaymentScheduleCardProps) {
+  const isProjected = props.projected !== undefined;
+  const rows: Array<PaymentInstallment | ProjectedInstallment> = isProjected
+    ? props.projected
+    : (props.installments ?? []);
 
-  const paidCount = installments.filter((installment) => installment.status === 'paid').length;
-  const remainingBalance = installments
+  if (rows.length === 0) return null;
+
+  const actualRows = isProjected ? [] : (props.installments ?? []);
+  const paidCount = actualRows.filter((installment) => installment.status === 'paid').length;
+  const remainingBalance = actualRows
     .filter((installment) => installment.status === 'pending')
     .reduce((sum, installment) => sum + toNumber(installment.amount), 0);
+  const projectedTotal = isProjected
+    ? props.projected.reduce((sum, row) => sum + row.amount, 0)
+    : 0;
 
   return (
     <Card>
@@ -108,28 +134,41 @@ export function PaymentScheduleCard({ installments }: PaymentScheduleCardProps) 
                 <th scope="col" className="px-2 text-xs font-semibold text-muted-foreground">
                   Due date
                 </th>
-                <th scope="col" className="px-2 text-xs font-semibold text-muted-foreground">
-                  Status
-                </th>
+                {!isProjected && (
+                  <th scope="col" className="px-2 text-xs font-semibold text-muted-foreground">
+                    Status
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {installments.map((installment) => {
-                const { variant, label, Icon } = getStatusPresentation(installment);
+              {rows.map((row) => {
+                const presentation = isProjected
+                  ? null
+                  : getStatusPresentation(row as PaymentInstallment);
                 return (
-                  <tr key={installment.id} className="h-11 border-b border-border last:border-0">
+                  <tr
+                    key={isProjected ? row.sequence : (row as PaymentInstallment).id}
+                    className="h-11 border-b border-border last:border-0"
+                  >
                     <td className="px-2 font-medium text-foreground">
-                      {getInstallmentLabel(installment.sequence)}
+                      {getInstallmentLabel(row.sequence)}
                     </td>
-                    <td className="px-2 text-foreground">{toNumber(installment.percentage)}%</td>
-                    <td className="px-2 text-foreground">{formatPHP(installment.amount)}</td>
-                    <td className="px-2 text-foreground">{formatDueDate(installment.due_date)}</td>
-                    <td className="px-2">
-                      <Badge variant={variant}>
-                        <Icon className="size-3" aria-hidden="true" />
-                        {label}
-                      </Badge>
+                    <td className="px-2 text-foreground">{toNumber(row.percentage)}%</td>
+                    <td className="px-2 text-foreground">{formatPHP(row.amount)}</td>
+                    <td className="px-2 text-foreground">
+                      {isProjected
+                        ? formatProjectedDueLabel(row.sequence)
+                        : formatDueDate((row as PaymentInstallment).due_date)}
                     </td>
+                    {presentation && (
+                      <td className="px-2">
+                        <Badge variant={presentation.variant}>
+                          <presentation.Icon className="size-3" aria-hidden="true" />
+                          {presentation.label}
+                        </Badge>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -139,31 +178,38 @@ export function PaymentScheduleCard({ installments }: PaymentScheduleCardProps) 
 
         {/* Mobile: stacked card-per-row (design-system.md §4 Table responsive rule). */}
         <ul className="flex flex-col gap-2 sm:hidden">
-          {installments.map((installment) => {
-            const { variant, label, Icon } = getStatusPresentation(installment);
+          {rows.map((row) => {
+            const presentation = isProjected
+              ? null
+              : getStatusPresentation(row as PaymentInstallment);
             return (
-              <li key={installment.id} className="rounded-lg border border-border p-3">
+              <li
+                key={isProjected ? row.sequence : (row as PaymentInstallment).id}
+                className="rounded-lg border border-border p-3"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-foreground">
-                    {getInstallmentLabel(installment.sequence)}
+                    {getInstallmentLabel(row.sequence)}
                   </span>
-                  <Badge variant={variant}>
-                    <Icon className="size-3" aria-hidden="true" />
-                    {label}
-                  </Badge>
+                  {presentation && (
+                    <Badge variant={presentation.variant}>
+                      <presentation.Icon className="size-3" aria-hidden="true" />
+                      {presentation.label}
+                    </Badge>
+                  )}
                 </div>
                 <dl className="mt-2 grid grid-cols-2 gap-y-1 text-sm">
                   <dt className="text-xs text-muted-foreground">Percentage</dt>
                   <dd className="text-right font-medium text-foreground">
-                    {toNumber(installment.percentage)}%
+                    {toNumber(row.percentage)}%
                   </dd>
                   <dt className="text-xs text-muted-foreground">Amount</dt>
-                  <dd className="text-right font-medium text-foreground">
-                    {formatPHP(installment.amount)}
-                  </dd>
+                  <dd className="text-right font-medium text-foreground">{formatPHP(row.amount)}</dd>
                   <dt className="text-xs text-muted-foreground">Due date</dt>
                   <dd className="text-right font-medium text-foreground">
-                    {formatDueDate(installment.due_date)}
+                    {isProjected
+                      ? formatProjectedDueLabel(row.sequence)
+                      : formatDueDate((row as PaymentInstallment).due_date)}
                   </dd>
                 </dl>
               </li>
@@ -172,14 +218,27 @@ export function PaymentScheduleCard({ installments }: PaymentScheduleCardProps) 
         </ul>
       </CardContent>
       <CardFooter className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <span className="font-medium text-foreground">
-          {paidCount} of {installments.length} paid
-        </span>
-        {remainingBalance > 0 && (
-          <span className="text-muted-foreground">
-            Remaining balance:{' '}
-            <span className="font-semibold text-foreground">{formatPHP(remainingBalance)}</span>
-          </span>
+        {isProjected ? (
+          <>
+            <span className="text-muted-foreground">
+              This schedule starts once you accept the quotation.
+            </span>
+            <span className="font-medium text-foreground">
+              Total: <span className="font-semibold">{formatPHP(projectedTotal)}</span>
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="font-medium text-foreground">
+              {paidCount} of {rows.length} paid
+            </span>
+            {remainingBalance > 0 && (
+              <span className="text-muted-foreground">
+                Remaining balance:{' '}
+                <span className="font-semibold text-foreground">{formatPHP(remainingBalance)}</span>
+              </span>
+            )}
+          </>
         )}
       </CardFooter>
     </Card>
