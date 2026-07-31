@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { formatPHP, toNumber } from '@/shared/utils/currency';
 import type { PaymentInstallment } from '@/shared/types/payment.types';
 import { formatProjectedDueLabel, type ProjectedInstallment } from '../utils/projectedSchedule';
+import { getInstallmentLabel } from '../utils/paymentPresentation';
 
 /**
  * Two mutually exclusive modes, one component:
@@ -20,17 +21,6 @@ import { formatProjectedDueLabel, type ProjectedInstallment } from '../utils/pro
 type PaymentScheduleCardProps =
   | { installments: PaymentInstallment[] | undefined; projected?: never }
   | { projected: ProjectedInstallment[]; installments?: never };
-
-/**
- * Sequence 1 is always the 50% downpayment; sequences 2-5 are the
- * 20%/10%/10%/10% weekly installments that follow (see the fixed schedule
- * defined in `backend/docs/superpowers/specs/2026-07-17-package-quotation-schema-design.md`).
- * Labeling by literal sequence number (not hardcoding a count of 5) keeps
- * this correct even if the schedule shape ever changes server-side.
- */
-function getInstallmentLabel(sequence: number): string {
-  return sequence === 1 ? 'Downpayment' : `Installment ${sequence}`;
-}
 
 /**
  * Parses a DATE-only string (e.g. "2026-07-18", no time component) from its

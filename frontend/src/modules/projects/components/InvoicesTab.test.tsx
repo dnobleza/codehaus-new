@@ -69,12 +69,63 @@ function renderTab(overrides: Partial<Project> = {}) {
 }
 
 describe('InvoicesTab', () => {
-  it('no longer renders the payment receipt or accept/reject actions', () => {
+  it('no longer renders the quotation breakdown or accept/reject actions', () => {
+    renderTab({ quotations: [{ ...quotation, status: 'accepted' }] });
+
+    // The quotation's cost breakdown moved to the Quotations section. Asserted
+    // via 'Breakdown'/'Pages Included' rather than the card title, since the
+    // payment receipt added below shares the title "Payment Receipt".
+    expect(screen.queryByText('Breakdown')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pages Included')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Accept Quotation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
+  });
+
+  it('renders no payment receipt until a payment has been submitted', () => {
     renderTab({ quotations: [{ ...quotation, status: 'accepted' }] });
 
     expect(screen.queryByText('Payment Receipt')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Accept Quotation' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
+  });
+
+  it('renders the payment receipt once a payment exists', () => {
+    vi.mocked(useProjectPayments).mockReturnValue({
+      data: [
+        {
+          id: 'p-1',
+          project_id: 'proj-1',
+          installment_id: 'i-1',
+          payment_method: 'gcash',
+          amount: '25000.00',
+          reference_number: 'REF123',
+          proof_of_payment_url: null,
+          status: 'verified',
+          verified_by: 1,
+          verified_at: '2026-07-02',
+          created_at: '2026-07-01',
+        },
+      ],
+    } as unknown as ReturnType<typeof useProjectPayments>);
+
+    renderTab({
+      quotations: [{ ...quotation, status: 'accepted' }],
+      paymentInstallments: [
+        {
+          id: 'i-1',
+          project_id: 'proj-1',
+          quotation_id: 'q-1',
+          sequence: 1,
+          percentage: '50.00',
+          amount: '25000.00',
+          due_date: '2026-07-01',
+          status: 'paid',
+          created_at: '2026-07-01',
+        },
+      ],
+    });
+
+    expect(screen.getByText('Payment Receipt')).toBeInTheDocument();
+    expect(screen.getAllByText('REF123').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Downpayment').length).toBeGreaterThan(0);
   });
 
   it('links a sent quotation out to the quotations section', () => {

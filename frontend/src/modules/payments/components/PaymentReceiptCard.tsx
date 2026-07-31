@@ -1,32 +1,17 @@
-import { Badge, type BadgeProps } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatPHP } from '@/shared/utils/currency';
-import type { Payment, PaymentStatus, PaymentMethod } from '@/shared/types/payment.types';
+import type { Payment } from '@/shared/types/payment.types';
 import type { Project } from '@/shared/types/project.types';
 import type { Quotation } from '@/shared/types/quotation.types';
 import { usePackage } from '@/modules/packages/api/packages.queries';
 import { PaymentScheduleCard } from './PaymentScheduleCard';
+import {
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_STATUS_BADGE,
+  PAYMENT_STATUS_LABEL,
+} from '../utils/paymentPresentation';
 import codehausLogo from '@/assets/codehaus-logo.svg';
-
-const PAYMENT_STATUS_BADGE: Record<PaymentStatus, BadgeProps['variant']> = {
-  pending: 'neutral',
-  verification: 'warning',
-  verified: 'success',
-  rejected: 'danger',
-};
-
-const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
-  pending: 'Pending',
-  verification: 'Under Verification',
-  verified: 'Verified',
-  rejected: 'Rejected — please resubmit',
-};
-
-const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
-  bank_transfer: 'Bank Transfer',
-  gcash: 'GCash',
-  maya: 'Maya',
-};
 
 interface PaymentReceiptCardProps {
   project: Project;

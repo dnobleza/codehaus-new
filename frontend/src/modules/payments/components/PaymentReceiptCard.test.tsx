@@ -50,6 +50,7 @@ const baseQuotation: Quotation = {
 const basePayment: Payment = {
   id: 'p-1',
   project_id: 'proj-1',
+  installment_id: 'i-1',
   payment_method: 'gcash',
   amount: '25000.00',
   reference_number: 'REF123',

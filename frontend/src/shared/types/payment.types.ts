@@ -16,6 +16,14 @@ export type PaymentStatus = 'pending' | 'verification' | 'verified' | 'rejected'
 export interface Payment {
   id: string;
   project_id: string;
+  /**
+   * The installment this payment was submitted against, resolved server-side
+   * from "the next pending installment" at submission time
+   * (`payments.service.js`). Nullable because the column is nullable for
+   * pre-installment-schedule rows. Present on every API response — the
+   * presenter spreads the full row.
+   */
+  installment_id: string | null;
   payment_method: PaymentMethod;
   /** NUMERIC(12,2) as a string. */
   amount: string;

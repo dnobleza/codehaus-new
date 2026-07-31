@@ -118,7 +118,10 @@ export function useAdminPayments(filters?: ListAdminPaymentsFilters) {
   });
 }
 
-function invalidateAdminPaymentCaches(queryClient: ReturnType<typeof useQueryClient>, projectId?: string) {
+function invalidateAdminPaymentCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId?: string,
+) {
   queryClient.invalidateQueries({ queryKey: queryKeys.payments.adminAll() });
   queryClient.invalidateQueries({ queryKey: queryKeys.projects.adminAll() });
   if (projectId) {

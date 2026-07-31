@@ -10,6 +10,7 @@ import { useProject } from '../api/projects.queries';
 import { ProjectStatusStepper } from './ProjectStatusStepper';
 import { useProjectPayments } from '@/modules/payments/api/payments.queries';
 import { PaymentForm } from '@/modules/payments/components/PaymentForm';
+import { PaymentHistoryReceipt } from '@/modules/payments/components/PaymentHistoryReceipt';
 
 interface InvoicesTabProps {
   projectId: string;
@@ -178,6 +179,19 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
           </CardContent>
         </Card>
       )}
+
+      {/*
+        Proof-of-payment record: what the client has actually paid, and what's
+        left. Distinct from the quotation's cost breakdown, which lives in the
+        Quotations section — see `PaymentHistoryReceipt`'s doc comment.
+      */}
+      <PaymentHistoryReceipt
+        payments={payments}
+        installments={project.paymentInstallments}
+        quotationNumber={
+          latestQuotation?.status === 'accepted' ? latestQuotation.quotation_number : undefined
+        }
+      />
 
       {project.status_code === 'accepted' && !latestPayment && isFullyPaid && (
         <div className="flex flex-col items-center gap-2 py-8 text-center">
