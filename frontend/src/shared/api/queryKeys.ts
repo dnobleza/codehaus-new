@@ -38,6 +38,14 @@ export const queryKeys = {
       [...queryKeys.projects.adminAll(), 'list', filters ?? {}] as const,
     adminDetail: (id: string) => [...queryKeys.projects.adminAll(), 'detail', id] as const,
   },
+  quotations: {
+    all: ['quotations'] as const,
+    // Client's own cross-project quotation list (GET /quotations). There is
+    // no `detail` key: the quotation detail page reads its quotation out of
+    // the parent project's `projects.detail` query rather than fetching one
+    // directly, since the API has no GET /quotations/:id.
+    list: () => [...queryKeys.quotations.all, 'list'] as const,
+  },
   payments: {
     all: ['payments'] as const,
     listByProject: (projectId: string) =>

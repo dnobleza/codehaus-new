@@ -1,6 +1,6 @@
 import { apiClient } from '@/shared/api/apiClient';
 import type { ApiEnvelope } from '@/shared/types/api.types';
-import type { Quotation } from '@/shared/types/quotation.types';
+import type { Quotation, QuotationListItem } from '@/shared/types/quotation.types';
 
 /**
  * camelCase body, matching
@@ -16,12 +16,20 @@ export interface CreateQuotationPayload {
 }
 
 /**
- * Raw REST calls for the quotation domain. Quotations have no standalone
- * `GET /quotations/:id` in this API — they're always read nested inside
- * their parent `Project` (see `modules/projects/api/projects.api.ts`), so
- * this module only exposes the write actions.
+ * Raw REST calls for the quotation domain. There is no
+ * `GET /quotations/:id` in this API — a single quotation is always read
+ * nested inside its parent `Project` (see
+ * `modules/projects/api/projects.api.ts`). `listMine()` below is the one
+ * flat read surface: a cross-project list for the client's Quotations page,
+ * scoped server-side to the caller's own projects.
  */
 export const quotationsApi = {
+  /** The caller's own quotations across every project they own, newest first. */
+  async listMine(): Promise<QuotationListItem[]> {
+    const response = await apiClient.get<ApiEnvelope<QuotationListItem[]>>('/quotations');
+    return response.data.data;
+  },
+
   /** Client-triggered: persists the selected package + add-ons as a `draft` quotation request. */
   async create(projectId: string, payload: CreateQuotationPayload): Promise<Quotation> {
     const response = await apiClient.post<ApiEnvelope<Quotation>>(

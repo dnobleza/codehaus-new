@@ -44,3 +44,21 @@ export interface Quotation {
   responded_at: string | null;
   addons?: QuotationAddon[];
 }
+
+/**
+ * Flat list row from `GET /quotations` — the client's quotations across all
+ * their projects. Deliberately NOT the same shape as `Quotation` above: the
+ * list query joins only what the table renders and never fetches addon line
+ * items, but it does carry `project_title` from the joined `projects` row,
+ * which the nested `Quotation` has no reason to include.
+ */
+export interface QuotationListItem {
+  id: string;
+  quotation_number: string;
+  status: QuotationStatus;
+  /** NUMERIC(12,2) as a string. */
+  total_amount: string;
+  created_at: string;
+  project_id: string;
+  project_title: string;
+}

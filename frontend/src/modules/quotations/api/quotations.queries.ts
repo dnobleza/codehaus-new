@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/shared/api/queryKeys';
 import {
@@ -7,6 +7,14 @@ import {
   type AdminQuotationPayload,
   type CreateQuotationPayload,
 } from './quotations.api';
+
+/** Client's own quotations across all their projects — backs the Quotations list page. */
+export function useMyQuotations() {
+  return useQuery({
+    queryKey: queryKeys.quotations.list(),
+    queryFn: () => quotationsApi.listMine(),
+  });
+}
 
 /**
  * All three quotation mutations invalidate the parent project's detail
@@ -41,6 +49,7 @@ export function useAcceptQuotation(projectId: string) {
     mutationFn: (quotationId: string) => quotationsApi.accept(projectId, quotationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.quotations.list() });
     },
   });
 }
@@ -52,6 +61,7 @@ export function useRejectQuotation(projectId: string) {
     mutationFn: (quotationId: string) => quotationsApi.reject(projectId, quotationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.quotations.list() });
     },
   });
 }
