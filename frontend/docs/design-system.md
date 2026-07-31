@@ -544,7 +544,13 @@ Precise values for implementation, consolidated for quick reference:
 
 ## 7. Landing Page Visual Treatment
 
-Version 1.2. Scope: `frontend/src/modules/marketing/**` only (`LandingPage.tsx` and its `components/` — Navbar, Hero, ProductShowcase, Services, Workflow, SocialProof, Testimonials, Pricing, ClosingCta, About, Contact, Footer). Nothing in this section applies to the authenticated app shell (Sidebar, dashboards, `auth`, etc.). §7.1–§7.10 below are the original v1.1 "reskin" pass (glass/gradient treatment of the existing sections) and remain accurate as implemented. §7.11 onward is the v1.2 addendum: a full visual overhaul to a premium SaaS-tier landing page (split hero with product showcase, new Workflow/SocialProof/Testimonials/ClosingCta sections, feature mini-previews), built strictly on top of the v1.1 token/gradient system rather than replacing it.
+Version 1.3. Scope: `frontend/src/modules/marketing/**` only (`LandingPage.tsx` and its `components/` — Navbar, Hero, ProductShowcase, Services, Workflow, SocialProof, Testimonials, Pricing, ClosingCta, About, Contact, Footer). Nothing in this section applies to the authenticated app shell (Sidebar, dashboards, `auth`, etc.).
+
+> **Read §7.20 first.** v1.3 replaced the landing page's **color and material language** with a claymorphic + glassmorphic system: warm cream base, clay accent, frosted panels, moulded shadows. §7.20 is the current, authoritative treatment.
+>
+> §7.1–§7.19 below are retained because their **structure, layout, spacing rhythm, section order, and motion specs are still exactly what is implemented** — the split hero, the product showcase and its parallax, the workflow timeline, the feature mini-previews, the section ordering. What is **superseded** in those subsections is every *color* statement: references to brand blue `#2563EB`, `--primary` as blue, and the Alice Blue `#F0F8FF` page background no longer describe the landing page. Read them for layout, not for palette.
+
+§7.1–§7.10 were the original v1.1 "reskin" pass. §7.11–§7.19 were the v1.2 premium overhaul (split hero with product showcase, new Workflow/SocialProof/Testimonials/ClosingCta sections, feature mini-previews).
 
 **Direction.** Move the landing page from "flat sections with one decorative panel behind the Hero" to a single coherent light/glass system that reads as more elegant and premium, in the vein of suzzyai.com's formula — light neutral base, one saturated brand accent expressed through gradients/glass rather than flat color blocks, frosted translucent header, generous whitespace — reimplemented with **our** brand blue (`--primary` / `#2563EB`) and **our** existing primitives (`BrandGradientAccent`, `Card`, `Button`, the documented spacing/radius/shadow scale). This is a reskin, not a new design language: every recommendation below extends a token or component that already exists in §1–§2 rather than inventing a parallel one.
 
@@ -789,3 +795,83 @@ A follow-up pass on top of §7.12's Hero/Product Showcase: the CSS-built laptop 
 **Background effects** (`HeroBackgroundEffects.tsx`, new): extends rather than replaces `BrandGradientAccent`/`GlowOrb` — a single slow-drifting `GlowOrb` (22s `x`/`y` loop) plus 9 small, sparse, low-opacity light specks (`bg-foreground/20`, 2–3px, independent 10–18s drift loops). Pure CSS/Framer transforms, no canvas/WebGL, all `pointer-events-none`/`aria-hidden` and kept at `-z-10` so they never obstruct text/CTA contrast (§5 WCAG notes still apply). Gated by `useReducedMotion()` — specks and drift are static placements with no loop when reduced motion is preferred.
 
 **Reduced-motion fallback, summarized**: with `prefers-reduced-motion` set, the laptop renders at its settled entrance position with no ambient loop or parallax reaction; `LaptopScreen` shows the dashboard once, statically, with no cross-fade cycle; widget cards keep their one-shot entrance but no ambient float, drift, or parallax offset; the Hero background glow/specks hold static placement with no drift; button ripple is skipped. Nothing infinite or auto-cycling ever renders under reduced motion, per the existing project-wide convention (§7.11).
+
+### 7.20 v1.3 — Claymorphism + Glassmorphism (current)
+
+The landing page's material language. Two materials, one page: **clay** supplies weight and tactility (moulded shadows, generous padding, rounded forms), **glass** supplies lightness and depth (frosted translucency, blur, refraction sheen). Cards use the blend; buttons are clay; the header, footer, and floating widgets are glass.
+
+Structure, section order, and every motion spec in §7.11–§7.19 are unchanged — this pass changed color and material only.
+
+#### Scoping — how it stays off the app
+
+The palette lives in a **`.theme-clay` class**, not `:root` (`frontend/src/index.css`). `LandingLayout.tsx` applies it to the marketing shell's root element, so the clay tokens cascade over the entire landing page and nowhere else. Every authenticated surface — dashboards, auth, tables, badges — keeps the brand-blue tokens from §1.1 untouched.
+
+The leverage this buys: `BrandGradientAccent` and `GlowOrb` are built from `--color-primary` / `--color-accent` rather than literal colors, so **both re-tint automatically and neither file was modified**. The same is true of every `bg-primary`, `ring-primary/15`, and `text-accent` utility already on the page.
+
+When adding to the landing page, prefer a token or one of the four utilities below over a hardcoded color — a literal `rgba()` will not follow the theme, which is exactly the bug this pass removed from five call sites.
+
+#### Palette (`.theme-clay` overrides)
+
+| Token | Value | Role |
+|---|---|---|
+| `--background` | `#faf8f3` | Soft cream page base (replaces Alice Blue) |
+| `--card` | `#fffdf9` | Warm card surface |
+| `--foreground` | `#2a2a2a` | All body and heading text |
+| `--primary` | `#d4a574` | Warm clay accent |
+| `--primary-hover` | `#c99a6e` | Deeper clay |
+| `--primary-foreground` | `#2a2a2a` | **Dark**, not white — see contrast rules |
+| `--accent` | `#e8f4f8` | Cool glass tint |
+| `--muted-foreground` | `#6b5d4f` | Warm gray-brown secondary text |
+| `--border` | `#e6dccd` | Warm hairline |
+| `--ring` | `#a67c52` | Focus ring — deliberately darker than clay |
+| `--brand-ink` | `#3a2f26` | Warm dark panel (closing CTA); replaces cold `#0f172a` |
+
+The `--shadow-xs`…`--shadow-xl` scale is re-tinted from charcoal `rgba(17,24,39,…)` to warm brown `rgba(100,80,60,…)`.
+
+#### Material tokens
+
+```
+--clay-shadow        outer warm shadow + opposite-corner white counter-light + inset top highlight
+--clay-shadow-hover  the same three, expanded
+--clay-shadow-press  fully inset — the surface reads as pushed in
+--glass-bg           rgba(255,253,249,0.55)
+--glass-bg-hover     rgba(255,253,249,0.72)
+--glass-border       rgba(255,255,255,0.45)
+--glass-tint         rgba(232,244,248,0.35)
+--radius-clay        1.75rem
+```
+
+Clay depth is three shadows, not one: a warm shadow on one corner, a white counter-light on the opposite corner, and an inset highlight. Drop any of the three and the surface flattens into an ordinary drop shadow.
+
+#### The four utilities (`@layer components`, `index.css`)
+
+| Class | What it does | Use for |
+|---|---|---|
+| `.clay-surface` | `--radius-clay`, translucent diagonal sheen, `--clay-shadow` | Buttons, icon pucks, timeline nodes, logo strip |
+| `.glass-panel` | `--glass-bg` + blur(10px) saturate(140%) + `--glass-border` + `::before` refraction sheen | Header, hero copy panel, footer, floating widgets |
+| `.glass-clay` | Clay shadow on a glass fill — **the blend** | Every card: features, testimonials, pricing, stats |
+| `.clay-lift` | Hover: `--clay-shadow-hover` + `-4px` rise. Active: `--clay-shadow-press` | Anything interactive |
+
+Two implementation details worth knowing before you use them:
+
+- `.clay-surface`'s sheen is **translucent**, not an opaque cream gradient, so it composites over whatever `background-color` you set. That's what lets a clay CTA (`bg-primary`) and a cream card share one class.
+- `.glass-panel`'s sheen is an absolutely-positioned `::before`, so `.glass-panel > *` is lifted to `z-index: 1`. Direct children paint above the sheen; deeper content inherits normally.
+- Button's base `rounded-lg` is a *utility* and beats `.clay-surface`'s radius (components layer loses to utilities). State the radius explicitly on buttons — the page uses `rounded-full`.
+
+#### Contrast rules (non-negotiable)
+
+`#d4a574` on `#faf8f3` is **2.10:1** (measured). That single fact drives three rules:
+
+1. **Clay is never text on a light background.** It is allowed on surfaces, borders, shadows, icon fills, and decorative glyphs. Section eyebrow pills therefore use `text-foreground` on a clay-tinted fill, not `text-primary`.
+2. **Clay buttons take dark labels.** `--primary-foreground` is `#2a2a2a` — **6.45:1** on clay. White would be **2.23:1** and fails.
+3. **`--glass-bg` stays at 0.55 alpha.** A more dramatic 0.2 would look better and drop body text below 4.5:1 over a scrolling gradient. Do not lower it.
+
+Focus rings use `--ring` (`#a67c52`), darker than clay, so they stay visible against clay surfaces.
+
+#### Motion and fallbacks
+
+Hover lift is suppressed under `prefers-reduced-motion` while shadows remain — depth is information, movement is decoration. A `@supports not (backdrop-filter: …)` block raises `--glass-bg` to 0.94 so unsupported browsers get a solid warm panel rather than a flat translucent wash over live content.
+
+#### Deliberate exception — `LaptopScreen.tsx`
+
+The dashboard UI inside the laptop mockup **stays brand blue**. It is a depiction of the actual product; warming it to match the marketing page would misrepresent what a customer gets after signing up. It is the one intentional blue surface on the page.

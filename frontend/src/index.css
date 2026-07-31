@@ -41,14 +41,100 @@
 
   /* Elevation / shadow scale, design-system.md §1.6 — tinted with brand Text (#111827) */
   --shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.05);
-  --shadow-sm:
-    0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04);
-  --shadow-md:
-    0 4px 6px rgba(17, 24, 39, 0.07), 0 2px 4px rgba(17, 24, 39, 0.05);
-  --shadow-lg:
-    0 10px 15px rgba(17, 24, 39, 0.08), 0 4px 6px rgba(17, 24, 39, 0.05);
-  --shadow-xl:
-    0 20px 25px rgba(17, 24, 39, 0.1), 0 8px 10px rgba(17, 24, 39, 0.05);
+  --shadow-sm: 0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-md: 0 4px 6px rgba(17, 24, 39, 0.07), 0 2px 4px rgba(17, 24, 39, 0.05);
+  --shadow-lg: 0 10px 15px rgba(17, 24, 39, 0.08), 0 4px 6px rgba(17, 24, 39, 0.05);
+  --shadow-xl: 0 20px 25px rgba(17, 24, 39, 0.1), 0 8px 10px rgba(17, 24, 39, 0.05);
+}
+
+/*
+  Landing page clay + glass theme (design-system.md §7).
+
+  Scoped to the marketing shell via `.theme-clay` on `LandingLayout`'s root —
+  it is NOT applied at `:root`, so every app surface (auth, dashboard, tables,
+  badges) keeps the brand-blue palette above untouched.
+
+  Because `@theme inline` below maps `--color-*` to these same variables,
+  overriding them here is enough for every existing Tailwind utility
+  (`bg-primary`, `ring-primary/15`, `text-accent`) to re-tint automatically —
+  which is also why `BrandGradientAccent` and `GlowOrb` need no changes at
+  all: both are built from `--color-primary` / `--color-accent` rather than
+  literal colors.
+*/
+.theme-clay {
+  --background: #faf8f3;
+  --foreground: #2a2a2a;
+  --card: #fffdf9;
+  --card-foreground: #2a2a2a;
+
+  /* Warm clay replaces brand blue as the landing accent. `--primary-foreground`
+     is DARK, not white: white on #d4a574 is ~1.9:1 and fails WCAG AA, while
+     #2a2a2a on the same clay clears 4.5:1 comfortably. See §7 accessibility. */
+  --primary: #d4a574;
+  --primary-hover: #c99a6e;
+  --primary-foreground: #2a2a2a;
+
+  /* Cool glass tint, kept from the brief — used for frosted refraction
+     highlights and the `accent` GlowOrb, never for text. */
+  --accent: #e8f4f8;
+  --accent-foreground: #2a2a2a;
+
+  --secondary: #f2ece2;
+  --secondary-foreground: #2a2a2a;
+  --muted: #f2ece2;
+  --muted-foreground: #6b5d4f;
+  --border: #e6dccd;
+  --input: #e6dccd;
+  /* Deliberately darker than `--primary`: a clay-on-cream focus ring would be
+     nearly invisible, so the ring stays a saturated warm brown. */
+  --ring: #a67c52;
+
+  /* Warm dark surface replacing the cold slate `--brand-ink` for the closing
+     CTA panel — #0f172a reads blue-black against a cream page. */
+  --brand-ink: #3a2f26;
+  --brand-ink-foreground: #faf8f3;
+
+  /* Elevation scale re-tinted from brand-Text charcoal to warm brown. */
+  --shadow-xs: 0 1px 2px rgba(100, 80, 60, 0.06);
+  --shadow-sm: 0 1px 3px rgba(100, 80, 60, 0.09), 0 1px 2px rgba(100, 80, 60, 0.05);
+  --shadow-md: 0 4px 6px rgba(100, 80, 60, 0.08), 0 2px 4px rgba(100, 80, 60, 0.06);
+  --shadow-lg: 0 10px 15px rgba(100, 80, 60, 0.1), 0 4px 6px rgba(100, 80, 60, 0.06);
+  --shadow-xl: 0 20px 25px rgba(100, 80, 60, 0.12), 0 8px 10px rgba(100, 80, 60, 0.06);
+
+  /* Claymorphism: a warm outer shadow, a cool white counter-light from the
+     opposite corner, and an inset top highlight — the three together are what
+     read as soft moulded clay rather than a flat drop shadow. */
+  --clay-shadow:
+    6px 6px 16px rgba(100, 80, 60, 0.12), -4px -4px 12px rgba(255, 255, 255, 0.7),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.6);
+  --clay-shadow-hover:
+    10px 10px 24px rgba(100, 80, 60, 0.16), -6px -6px 16px rgba(255, 255, 255, 0.8),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+  /* Press state inverts entirely to inset, so the surface reads as pushed in. */
+  --clay-shadow-press:
+    inset 3px 3px 8px rgba(100, 80, 60, 0.15), inset -2px -2px 6px rgba(255, 255, 255, 0.6);
+
+  /* Glassmorphism. `--glass-bg` sits at 0.55 alpha rather than a more dramatic
+     0.2 so body text over a frosted panel still clears 4.5:1 against whatever
+     gradient happens to scroll underneath it. */
+  --glass-bg: rgba(255, 253, 249, 0.55);
+  --glass-bg-hover: rgba(255, 253, 249, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-tint: rgba(232, 244, 248, 0.35);
+
+  --radius-clay: 1.75rem;
+}
+
+/*
+  Without backdrop-filter support the frosted panels would render as a flat
+  55%-opaque wash over live content — legible-ish, but visually broken. Fall
+  back to a near-opaque warm surface instead.
+*/
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .theme-clay {
+    --glass-bg: rgba(255, 253, 249, 0.94);
+    --glass-bg-hover: rgba(255, 253, 249, 0.98);
+  }
 }
 
 @theme inline {
@@ -85,6 +171,10 @@
   --color-brand-ink: var(--brand-ink);
   --color-brand-ink-foreground: var(--brand-ink-foreground);
 
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --color-glass-tint: var(--glass-tint);
+
   --shadow-xs: var(--shadow-xs);
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
@@ -101,5 +191,114 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
+  }
+}
+
+/*
+  Landing page clay + glass surface utilities (design-system.md §7).
+
+  Four composable classes so no section hand-rolls its own shadow stack —
+  `clay-surface` and `glass-panel` are the two base materials, `clay-lift` is
+  the shared interaction, and `glass-clay` is the blend (glass fill, clay
+  depth) used by every card on the page. All four depend on the tokens defined
+  by `.theme-clay` above and are therefore inert outside the marketing shell.
+*/
+@layer components {
+  /* The sheen is translucent rather than an opaque cream gradient so this
+     class composites over whatever background-color the caller sets — a clay
+     CTA (`bg-primary`) and a cream card both keep their own fill and gain the
+     same moulded top-left-lit depth. */
+  .clay-surface {
+    border-radius: var(--radius-clay);
+    background-image: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.38) 0%,
+      rgba(255, 255, 255, 0) 45%,
+      rgba(100, 80, 60, 0.07) 100%
+    );
+    box-shadow: var(--clay-shadow);
+    transition:
+      box-shadow 300ms ease,
+      transform 300ms ease;
+  }
+
+  .glass-panel {
+    position: relative;
+    border-radius: var(--radius-clay);
+    background-color: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    transition:
+      background-color 300ms ease,
+      backdrop-filter 300ms ease,
+      box-shadow 300ms ease,
+      transform 300ms ease;
+  }
+
+  /* Light-refraction sheen: a diagonal white-to-transparent wash plus the cool
+     glass tint, so a frosted panel catches light at its top-left the way real
+     glass does. Pointer-events-none and behind content. */
+  .glass-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background-image: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.08) 32%,
+      var(--glass-tint) 100%
+    );
+  }
+
+  /* The sheen is an absolutely-positioned ::before, so it would otherwise
+     paint on top of the panel's own (statically-positioned) children. Lift
+     direct children into their own stacking position above it. */
+  .glass-panel > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .glass-panel:hover {
+    background-color: var(--glass-bg-hover);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+  }
+
+  /* The blend: glass fill and border, clay depth underneath. */
+  .glass-clay {
+    box-shadow: var(--clay-shadow);
+  }
+
+  .glass-clay:hover {
+    box-shadow: var(--clay-shadow-hover);
+  }
+
+  /* Shared interaction for anything tactile — gentle rise plus shadow spread. */
+  .clay-lift:hover {
+    box-shadow: var(--clay-shadow-hover);
+    transform: translateY(-4px);
+  }
+
+  .clay-lift:active {
+    box-shadow: var(--clay-shadow-press);
+    transform: translateY(0);
+  }
+
+  /* Motion is the decorative half of these effects; the depth cue is the
+     shadow, which stays. Matches the reduced-motion respect already built into
+     `Button`'s ripple and `ScrollReveal`. */
+  @media (prefers-reduced-motion: reduce) {
+    .clay-surface,
+    .glass-panel {
+      transition: none;
+    }
+
+    .clay-lift:hover {
+      transform: none;
+    }
   }
 }

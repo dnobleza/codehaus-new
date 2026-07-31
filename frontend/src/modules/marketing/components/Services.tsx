@@ -53,7 +53,7 @@ const SERVICES: Service[] = [
 function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
   if (kind === 'progress') {
     return (
-      <div className="flex flex-col gap-2 rounded-lg bg-secondary/50 p-3">
+      <div className="flex flex-col gap-2 rounded-2xl bg-secondary/60 p-3 shadow-[var(--clay-shadow-press)]">
         {[
           { label: 'Storefront revamp', value: 80 },
           { label: 'Mobile app v2', value: 45 },
@@ -64,10 +64,7 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
               <span>{row.value}%</span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${row.value}%` }}
-              />
+              <div className="h-full rounded-full bg-primary" style={{ width: `${row.value}%` }} />
             </div>
           </div>
         ))}
@@ -78,7 +75,7 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
   if (kind === 'chart') {
     const bars = [40, 65, 50, 85, 60];
     return (
-      <div className="flex h-16 items-end gap-1.5 rounded-lg bg-secondary/50 p-3">
+      <div className="flex h-16 items-end gap-1.5 rounded-2xl bg-secondary/60 p-3 shadow-[var(--clay-shadow-press)]">
         {bars.map((height, index) => (
           <div
             key={index}
@@ -92,7 +89,7 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
 
   if (kind === 'invoice') {
     return (
-      <div className="flex flex-col gap-2 rounded-lg bg-secondary/50 p-3">
+      <div className="flex flex-col gap-2 rounded-2xl bg-secondary/60 p-3 shadow-[var(--clay-shadow-press)]">
         <div className="flex items-center justify-between text-[11px]">
           <span className="font-medium text-foreground">Invoice #1042</span>
           <span className="rounded-full bg-success/10 px-2 py-0.5 text-[9px] font-medium text-success">
@@ -108,7 +105,7 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
   }
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg bg-secondary/50 p-3">
+    <div className="flex flex-col gap-1.5 rounded-2xl bg-secondary/60 p-3 shadow-[var(--clay-shadow-press)]">
       <div className="max-w-[80%] rounded-lg rounded-bl-sm bg-card px-2.5 py-1.5 text-[10px] text-foreground shadow-sm">
         Quote looks great, approving now.
       </div>
@@ -130,25 +127,29 @@ export function Services() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/30 bg-primary/8 px-4 py-1.5 text-xs font-medium text-primary">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground shadow-[var(--clay-shadow-press)]">
             Platform
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Everything your agency needs, in one place
           </h2>
           <p className="mt-4 text-base text-muted-foreground">
-            CodeHaus replaces the spreadsheets, email threads, and disconnected
-            tools with one workspace built around how software agencies
-            actually work.
+            CodeHaus replaces the spreadsheets, email threads, and disconnected tools with one
+            workspace built around how software agencies actually work.
           </p>
         </ScrollReveal>
 
         <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {SERVICES.map((service, index) => (
             <ScrollReveal key={service.title} delay={index * 0.08}>
-              <Card className="h-full border-transparent shadow-sm ring-1 ring-foreground/8 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-primary/15">
+              {/* The blend the section is built on (§7.4): frosted glass fill
+                  and border, clay depth beneath, gentle lift on hover. */}
+              <Card className="glass-panel glass-clay clay-lift h-full border-glass-border p-2">
                 <CardHeader>
-                  <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  {/* Clay puck: icon fill is one of the roles clay IS allowed
+                      in — it carries no text, so its 2.10:1 ratio against the
+                      page background doesn't apply (§7.20 contrast rules). */}
+                  <div className="clay-surface mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary/70 text-foreground">
                     <service.icon className="size-5" aria-hidden="true" />
                   </div>
                   <CardTitle className="text-base font-semibold">{service.title}</CardTitle>

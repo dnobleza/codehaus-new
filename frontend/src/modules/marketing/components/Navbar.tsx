@@ -20,7 +20,11 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-primary/10 bg-background/60 shadow-[0_1px_0_0_rgba(37,99,235,0.05)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/50">
+    // Glassmorphic header (§7.2): frosted translucent bar over whatever
+    // scrolls beneath it, with a warm clay hairline instead of a blue one. The
+    // rounded `--radius-clay` treatment is deliberately NOT applied here — a
+    // full-bleed sticky bar reads better with square edges.
+    <header className="sticky top-0 z-50 border-b border-glass-border bg-glass-bg shadow-[0_1px_0_0_rgba(100,80,60,0.06)] backdrop-blur-xl backdrop-saturate-150">
       <nav
         aria-label="Primary"
         className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
@@ -34,7 +38,10 @@ export function Navbar() {
             <li key={item.href}>
               <a
                 href={item.href}
-                className="relative text-sm font-medium text-muted-foreground transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200 hover:text-foreground hover:after:scale-x-100"
+                // Clay-colored underline wipe plus a soft fade-in glow on
+                // hover (§7.2). The label itself darkens to `--foreground`
+                // rather than turning clay — clay text on cream is ~1.9:1.
+                className="relative text-sm font-medium text-muted-foreground transition-[color,text-shadow] duration-200 after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform after:duration-200 hover:text-foreground hover:[text-shadow:0_0_12px_rgba(212,165,116,0.55)] hover:after:scale-x-100"
               >
                 {item.label}
               </a>
@@ -48,7 +55,9 @@ export function Navbar() {
           </Button>
           <Button
             onClick={() => navigate('/register')}
-            className="shadow-[0_1px_2px_rgba(37,99,235,0.15),0_4px_12px_-2px_rgba(37,99,235,0.35)] hover:shadow-[0_1px_2px_rgba(37,99,235,0.2),0_6px_16px_-2px_rgba(37,99,235,0.45)]"
+            // `rounded-full` must be stated here: Button's base `rounded-lg`
+            // is a utility and would otherwise beat `.clay-surface`'s radius.
+            className="clay-surface clay-lift rounded-full bg-primary px-6 py-2 font-semibold text-primary-foreground hover:bg-primary"
           >
             Sign up
           </Button>
@@ -81,7 +90,7 @@ export function Navbar() {
             <motion.div
               id="mobile-nav-drawer"
               className={cn(
-                'fixed inset-x-0 top-16 z-40 h-[calc(100vh-4rem)] w-full overflow-y-auto bg-card/95 backdrop-blur-md lg:hidden',
+                'fixed inset-x-0 top-16 z-40 h-[calc(100vh-4rem)] w-full overflow-y-auto bg-glass-bg backdrop-blur-xl backdrop-saturate-150 lg:hidden',
               )}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -94,7 +103,7 @@ export function Navbar() {
                     <a
                       href={item.href}
                       onClick={handleNavClick}
-                      className="block rounded-md px-3 py-3 text-base font-medium text-foreground hover:bg-muted"
+                      className="block rounded-2xl px-4 py-3 text-base font-medium text-foreground transition-shadow duration-200 hover:bg-secondary/60 hover:shadow-[var(--clay-shadow-press)]"
                     >
                       {item.label}
                     </a>

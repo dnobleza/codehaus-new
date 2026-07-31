@@ -112,7 +112,9 @@ function DashboardGrid() {
               >
                 {task.done && <CheckCircle2 className="size-2.5" aria-hidden="true" />}
               </span>
-              <p className="truncate text-[9px] text-muted-foreground sm:text-[10px]">{task.label}</p>
+              <p className="truncate text-[9px] text-muted-foreground sm:text-[10px]">
+                {task.label}
+              </p>
             </div>
           ))}
         </div>

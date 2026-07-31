@@ -110,8 +110,16 @@ interface FloatingWidgetCardProps {
  * (`animate`, `y`/`rotate`/`x`). Because these are separate elements, their
  * transforms compose naturally instead of colliding on the same property.
  */
-function FloatingWidgetCard({ widget, smoothPointerX, prefersReducedMotion }: FloatingWidgetCardProps) {
-  const parallaxX = useTransform(smoothPointerX, [-0.5, 0.5], [-widget.parallaxIntensity, widget.parallaxIntensity]);
+function FloatingWidgetCard({
+  widget,
+  smoothPointerX,
+  prefersReducedMotion,
+}: FloatingWidgetCardProps) {
+  const parallaxX = useTransform(
+    smoothPointerX,
+    [-0.5, 0.5],
+    [-widget.parallaxIntensity, widget.parallaxIntensity],
+  );
 
   const ambientAnimate = prefersReducedMotion
     ? undefined
@@ -128,7 +136,7 @@ function FloatingWidgetCard({ widget, smoothPointerX, prefersReducedMotion }: Fl
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.4 }}
       transition={{ duration: 0.6, delay: 0.6 + widget.floatDelay * 0.15, ease: [0.16, 1, 0.3, 1] }}
-      className={`absolute z-10 items-center gap-2.5 rounded-xl bg-card/80 p-3 shadow-xl ring-1 ring-foreground/8 backdrop-blur-md ${widget.className}`}
+      className={`glass-panel glass-clay absolute z-10 items-center gap-2.5 rounded-2xl p-3.5 ${widget.className}`}
     >
       <motion.div
         animate={ambientAnimate}
@@ -142,14 +150,18 @@ function FloatingWidgetCard({ widget, smoothPointerX, prefersReducedMotion }: Fl
         }
         className="flex items-center gap-2.5 will-change-transform"
       >
-        <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${TONE_CLASS[widget.tone]}`}>
+        <span
+          className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${TONE_CLASS[widget.tone]}`}
+        >
           <widget.icon className="size-4" aria-hidden="true" />
         </span>
         <div className="flex flex-col">
           <p className="text-[10px] text-muted-foreground">{widget.label}</p>
           <p className="flex items-center gap-0.5 text-xs font-semibold text-foreground">
             {widget.value}
-            {widget.tone === 'success' && <ArrowUpRight className="size-3 text-success" aria-hidden="true" />}
+            {widget.tone === 'success' && (
+              <ArrowUpRight className="size-3 text-success" aria-hidden="true" />
+            )}
           </p>
         </div>
       </motion.div>
@@ -229,12 +241,20 @@ export function ProductShowcase() {
 
       {/* Laptop mockup — layered: perspective context > base 3/4 angle > pointer parallax > scroll entrance > ambient float */}
       <div className="relative" style={{ perspective: 1400 }}>
-        <div className="[transform-style:preserve-3d]" style={{ transform: 'rotateY(24deg) rotateX(8deg)' }}>
+        <div
+          className="[transform-style:preserve-3d]"
+          style={{ transform: 'rotateY(24deg) rotateX(8deg)' }}
+        >
           <motion.div
             style={
               prefersReducedMotion
                 ? undefined
-                : { rotateY: laptopRotateY, rotateX: laptopRotateX, scale: laptopScale, willChange: 'transform' }
+                : {
+                    rotateY: laptopRotateY,
+                    rotateX: laptopRotateX,
+                    scale: laptopScale,
+                    willChange: 'transform',
+                  }
             }
             className="[transform-style:preserve-3d]"
           >
@@ -247,7 +267,9 @@ export function ProductShowcase() {
             >
               <motion.div
                 animate={
-                  prefersReducedMotion ? undefined : { y: [-4, -18, -4], rotate: [-4, 4, -4], rotateX: [3, -3, 3] }
+                  prefersReducedMotion
+                    ? undefined
+                    : { y: [-4, -18, -4], rotate: [-4, 4, -4], rotateX: [3, -3, 3] }
                 }
                 transition={
                   prefersReducedMotion
@@ -257,7 +279,7 @@ export function ProductShowcase() {
                 className="relative will-change-transform"
               >
                 {/* Screen bezel */}
-                <div className="rounded-t-2xl border border-brand-ink bg-brand-ink p-2 shadow-2xl transition-shadow duration-300 hover:shadow-[0_30px_60px_-15px_rgba(37,99,235,0.4)] sm:p-3">
+                <div className="rounded-t-2xl border border-brand-ink bg-brand-ink p-2 shadow-2xl transition-shadow duration-300 hover:shadow-[0_30px_60px_-15px_rgba(100,80,60,0.45)] sm:p-3">
                   {/* Browser chrome */}
                   <div className="flex items-center gap-1.5 px-1.5 pb-2">
                     <span className="size-2 rounded-full bg-white/25" />

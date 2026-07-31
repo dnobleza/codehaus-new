@@ -41,7 +41,8 @@ export function SocialProof() {
           </p>
         </ScrollReveal>
 
-        <ScrollReveal delay={0.1} className="mt-8">
+        {/* Soft clay backing strip behind the logo row (§7.5). */}
+        <ScrollReveal delay={0.1} className="clay-surface mt-8 px-6 py-6 sm:px-10">
           <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {CLIENT_LOGOS.map((name) => (
               <li
@@ -57,8 +58,8 @@ export function SocialProof() {
         <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-3">
           {STATS.map((stat, index) => (
             <ScrollReveal key={stat.label} delay={index * 0.08}>
-              <div className="flex flex-col items-center gap-3 rounded-xl bg-card/70 p-8 text-center shadow-sm ring-1 ring-foreground/8 backdrop-blur-sm transition-all duration-300 hover:shadow-md hover:ring-primary/15">
-                <span className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="glass-panel glass-clay clay-lift flex flex-col items-center gap-3 p-8 text-center">
+                <span className="clay-surface flex size-12 items-center justify-center rounded-2xl bg-primary/70 text-foreground">
                   <stat.icon className="size-5" aria-hidden="true" />
                 </span>
                 <p className="text-3xl font-bold text-foreground">{stat.value}</p>

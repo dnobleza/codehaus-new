@@ -4,8 +4,17 @@ import type { FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 import { ScrollReveal } from './ScrollReveal';
+
+/**
+ * Clay field treatment (§7.20): pressed-in inset instead of a hard border.
+ * Applied at these call sites rather than to the shared `Input`/textarea
+ * primitives, which are used by app forms that must stay on the blue theme.
+ */
+const CLAY_FIELD_CLASS =
+  'rounded-2xl border-transparent bg-secondary/50 px-4 py-3 shadow-[var(--clay-shadow-press)] hover:border-transparent';
 
 /**
  * UI-only contact form per the brief — does not submit anywhere real yet.
@@ -21,16 +30,21 @@ export function Contact() {
   }
 
   return (
-    <section id="contact" className="bg-secondary/40 py-24 sm:py-32">
+    // `overflow-x-clip`: the decorative `-inset-6` accent below extends 24px
+    // past the container on each side, which pushed the document 8px wider
+    // than the viewport at 360px and produced a horizontal scrollbar.
+    <section id="contact" className="overflow-x-clip bg-secondary/40 py-24 sm:py-32">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/30 bg-primary/8 px-4 py-1.5 text-xs font-medium text-primary">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground shadow-[var(--clay-shadow-press)]">
             Get in touch
           </span>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Let's talk</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Let's talk
+          </h2>
           <p className="mt-4 text-base text-muted-foreground">
-            Questions about CodeHaus? Send us a message and our team will get
-            back to you within one business day.
+            Questions about CodeHaus? Send us a message and our team will get back to you within one
+            business day.
           </p>
         </ScrollReveal>
 
@@ -40,7 +54,7 @@ export function Contact() {
             layers={['radial']}
             className="-inset-6 -z-10 rounded-3xl"
           />
-          <div className="rounded-xl bg-card/95 p-6 shadow-md ring-1 ring-foreground/8 backdrop-blur-sm sm:p-8">
+          <div className="glass-panel glass-clay p-6 sm:p-8">
             {submitted ? (
               <Alert
                 variant="success"
@@ -50,13 +64,20 @@ export function Contact() {
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Input label="Name" name="name" placeholder="Ada Lovelace" required />
+                  <Input
+                    label="Name"
+                    name="name"
+                    placeholder="Ada Lovelace"
+                    required
+                    className={cn('h-12', CLAY_FIELD_CLASS)}
+                  />
                   <Input
                     label="Email"
                     name="email"
                     type="email"
                     placeholder="ada@example.com"
                     required
+                    className={cn('h-12', CLAY_FIELD_CLASS)}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -69,10 +90,17 @@ export function Contact() {
                     rows={4}
                     required
                     placeholder="Tell us about your team and what you're looking for."
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground hover:border-border focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className={cn(
+                      'w-full border text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+                      CLAY_FIELD_CLASS,
+                    )}
                   />
                 </div>
-                <Button type="submit" size="lg" className="self-start px-6">
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="clay-surface clay-lift h-12 self-start rounded-full bg-primary px-8 text-base font-semibold text-primary-foreground hover:bg-primary"
+                >
                   Send message
                 </Button>
               </form>

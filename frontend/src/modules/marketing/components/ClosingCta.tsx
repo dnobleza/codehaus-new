@@ -17,11 +17,16 @@ export function ClosingCta() {
   return (
     <section className="relative overflow-hidden bg-background py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <ScrollReveal className="relative overflow-hidden rounded-3xl bg-brand-ink px-6 py-16 text-center shadow-2xl sm:px-12 sm:py-20">
+        {/*
+          `--brand-ink` is re-tinted to a warm dark brown inside `.theme-clay`
+          (index.css), so this panel reads as deep clay rather than the cold
+          slate it is app-wide. The GlowOrbs below re-tint for free.
+        */}
+        <ScrollReveal className="clay-surface relative overflow-hidden bg-brand-ink px-6 py-16 text-center sm:px-12 sm:py-20">
           <BrandGradientAccent
             intensity="strong"
             layers={['radial']}
-            className="inset-0 -z-10 rounded-3xl"
+            className="inset-0 -z-10 rounded-[1.75rem]"
           />
           <GlowOrb color="accent" className="-top-16 -left-16 size-64" />
           <GlowOrb color="primary" className="-right-16 -bottom-16 size-64" />
@@ -30,15 +35,15 @@ export function ClosingCta() {
             Ready to scale your agency?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-base text-brand-ink-foreground/70">
-            Build faster with CodeHaus — one workspace for quotes, projects,
-            invoices, and every client conversation in between.
+            Build faster with CodeHaus — one workspace for quotes, projects, invoices, and every
+            client conversation in between.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button
               size="lg"
               onClick={() => navigate('/register')}
-              className="px-6 shadow-[0_1px_2px_rgba(37,99,235,0.15),0_4px_12px_-2px_rgba(37,99,235,0.35)] hover:shadow-[0_1px_2px_rgba(37,99,235,0.2),0_6px_16px_-2px_rgba(37,99,235,0.45)]"
+              className="clay-surface clay-lift h-12 rounded-full bg-primary px-8 text-base font-semibold text-primary-foreground hover:bg-primary"
             >
               Get started free
               <ArrowRight data-icon="inline-end" />
@@ -47,7 +52,7 @@ export function ClosingCta() {
               size="lg"
               variant="outline"
               render={<a href="#contact" />}
-              className="border-brand-ink-foreground/20 bg-transparent px-6 text-brand-ink-foreground hover:bg-brand-ink-foreground/10 hover:text-brand-ink-foreground"
+              className="clay-lift h-12 rounded-full border-brand-ink-foreground/25 bg-brand-ink-foreground/10 px-8 text-base font-semibold text-brand-ink-foreground backdrop-blur-md hover:bg-brand-ink-foreground/20 hover:text-brand-ink-foreground"
             >
               <Calendar data-icon="inline-start" />
               Book a demo

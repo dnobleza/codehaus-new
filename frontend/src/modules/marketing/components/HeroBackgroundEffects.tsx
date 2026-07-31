@@ -51,7 +51,9 @@ export function HeroBackgroundEffects() {
         whileInView={{ opacity: 1, transition: { duration: 1.2, ease: 'easeOut' } }}
         viewport={{ once: true, amount: 0.4 }}
         animate={prefersReducedMotion ? undefined : { x: [0, 40, -20, 0], y: [0, -30, 20, 0] }}
-        transition={prefersReducedMotion ? undefined : { duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+        transition={
+          prefersReducedMotion ? undefined : { duration: 22, repeat: Infinity, ease: 'easeInOut' }
+        }
         className="absolute top-1/4 left-1/2 size-[28rem] -translate-x-1/2 will-change-transform"
       >
         <GlowOrb color="primary" className="inset-0 size-full opacity-70" />
@@ -74,7 +76,12 @@ export function HeroBackgroundEffects() {
           transition={
             prefersReducedMotion
               ? undefined
-              : { duration: speck.duration, delay: speck.delay, repeat: Infinity, ease: 'easeInOut' }
+              : {
+                  duration: speck.duration,
+                  delay: speck.delay,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }
           }
         />
       ))}

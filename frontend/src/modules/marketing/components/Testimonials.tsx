@@ -13,7 +13,7 @@ interface Testimonial {
 const TESTIMONIALS: Testimonial[] = [
   {
     quote:
-      "CodeHaus replaced four different tools for us. Quoting to invoicing now takes minutes, not days, and clients love the portal.",
+      'CodeHaus replaced four different tools for us. Quoting to invoicing now takes minutes, not days, and clients love the portal.',
     name: 'Sarah Chen',
     role: 'Founder, Nimbus Labs',
     initials: 'SC',
@@ -27,7 +27,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
-      "The project-to-invoice pipeline is exactly how we already worked — CodeHaus just made it visible to the whole team.",
+      'The project-to-invoice pipeline is exactly how we already worked — CodeHaus just made it visible to the whole team.',
     name: 'Priya Nair',
     role: 'Operations Manager, Northwind Devs',
     initials: 'PN',
@@ -45,14 +45,13 @@ export function Testimonials() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {TESTIMONIALS.map((testimonial, index) => (
           <ScrollReveal key={testimonial.name} delay={index * 0.08}>
-            <Card className="h-full border-transparent shadow-sm ring-1 ring-foreground/8 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-primary/15">
+            <Card className="glass-panel glass-clay clay-lift h-full border-glass-border p-2">
               <CardContent className="flex h-full flex-col gap-4">
-                <Quote className="size-6 text-primary/40" aria-hidden="true" />
-                <p className="flex-1 text-sm leading-6 text-foreground">
-                  "{testimonial.quote}"
-                </p>
-                <div className="flex items-center gap-3 border-t border-border/60 pt-4">
-                  <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                {/* Clay-toned quote mark — decorative glyph, not body text. */}
+                <Quote className="size-7 text-primary" aria-hidden="true" />
+                <p className="flex-1 text-sm leading-6 text-foreground">"{testimonial.quote}"</p>
+                <div className="flex items-center gap-3 border-t border-glass-border pt-4">
+                  <span className="clay-surface flex size-10 items-center justify-center rounded-full bg-primary/70 text-xs font-semibold text-foreground">
                     {testimonial.initials}
                   </span>
                   <div>

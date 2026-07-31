@@ -44,15 +44,15 @@ export function Workflow() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/30 bg-primary/8 px-4 py-1.5 text-xs font-medium text-primary">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground shadow-[var(--clay-shadow-press)]">
             How it works
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             From first quote to final payment
           </h2>
           <p className="mt-4 text-base text-muted-foreground">
-            Every engagement moves through the same clear pipeline — nothing
-            falls through the cracks between teams or tools.
+            Every engagement moves through the same clear pipeline — nothing falls through the
+            cracks between teams or tools.
           </p>
         </ScrollReveal>
 
@@ -63,7 +63,7 @@ export function Workflow() {
             {STEPS.map((step, index) => (
               <ScrollReveal key={step.title} delay={index * 0.07}>
                 <li className="flex flex-col items-center gap-3 text-center">
-                  <span className="relative z-10 flex size-12 items-center justify-center rounded-full bg-card text-primary shadow-md ring-1 ring-foreground/8">
+                  <span className="relative z-10 clay-surface flex size-12 items-center justify-center rounded-full bg-card text-foreground">
                     <step.icon className="size-5" aria-hidden="true" />
                   </span>
                   <p className="text-sm font-semibold text-foreground">{step.title}</p>
@@ -80,7 +80,7 @@ export function Workflow() {
           {STEPS.map((step, index) => (
             <ScrollReveal key={step.title} delay={index * 0.06}>
               <li className="relative flex items-start gap-4 pl-0">
-                <span className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full bg-card text-primary shadow-md ring-1 ring-foreground/8">
+                <span className="clay-surface relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full bg-card text-foreground">
                   <step.icon className="size-5" aria-hidden="true" />
                 </span>
                 <div>
