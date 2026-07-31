@@ -385,8 +385,16 @@ async function respondToQuotation({ projectId, quotationId, clientId, decision }
   }
 }
 
+// A client reading their own quotations -- no business rules apply, so this
+// is a deliberate pass-through rather than an artificial abstraction. The
+// ownership scope lives in the repository's SQL predicate.
+async function listQuotationsForClient(clientId) {
+  return quotationsRepo.listByClient(clientId);
+}
+
 module.exports = {
   createClientQuotationRequest,
+  listQuotationsForClient,
   adminCreateAndSendQuotation,
   adminEditDraftQuotation,
   adminSendQuotation,

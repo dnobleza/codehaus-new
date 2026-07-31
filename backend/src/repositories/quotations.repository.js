@@ -108,6 +108,29 @@ async function setStatus(id, { status, sentAt, respondedAt }, db = pool) {
   return rows[0] || null;
 }
 
+// Every quotation belonging to the caller's own projects, newest first.
+// Ownership is enforced by the join predicate itself (p.client_id = $1), not
+// by filtering afterwards. Addon line items are deliberately NOT joined --
+// the list view doesn't render them, and the detail view reads them from
+// GET /projects/:id, which already nests them via listByProjectWithAddons.
+async function listByClient(clientId, db = pool) {
+  const { rows } = await db.query(
+    `SELECT q.id,
+            q.quotation_number,
+            q.status,
+            q.total_amount,
+            q.created_at,
+            q.project_id,
+            p.title AS project_title
+     FROM quotations q
+     JOIN projects p ON p.id = q.project_id
+     WHERE p.client_id = $1
+     ORDER BY q.created_at DESC`,
+    [clientId]
+  );
+  return rows;
+}
+
 module.exports = {
   insert,
   insertAddon,
@@ -115,6 +138,7 @@ module.exports = {
   findById,
   findByIdForProject,
   listByProjectWithAddons,
+  listByClient,
   updateCore,
   setStatus,
 };

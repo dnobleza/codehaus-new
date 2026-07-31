@@ -23,6 +23,17 @@ exports.create = async (req, res, next) => {
   }
 };
 
+// Client's own quotations across all their projects (GET /quotations).
+// clientId always comes from the verified JWT subject, never from the request.
+exports.list = async (req, res, next) => {
+  try {
+    const quotations = await quotationsService.listQuotationsForClient(req.user.id);
+    res.status(200).json({ success: true, message: 'Quotations retrieved successfully', data: quotations });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
 exports.accept = async (req, res, next) => {
   try {
     const quotation = await quotationsService.respondToQuotation({
