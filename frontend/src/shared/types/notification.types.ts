@@ -1,8 +1,11 @@
 /**
- * The events that produce a notification today. All six are admin/staff
+ * The events that produce a notification today. All seven are admin/staff
  * actions on a client's project — see
  * `backend/src/services/notifications.service.js`'s EVENT_BUILDERS, which owns
  * the copy and the destination link for each.
+ *
+ * Kept in sync with the `event_type` CHECK constraint on the notifications
+ * table (025_create_notifications.sql, extended by 026).
  */
 export type NotificationEventType =
   | 'quotation_sent'
@@ -10,7 +13,8 @@ export type NotificationEventType =
   | 'payment_rejected'
   | 'project_accepted'
   | 'project_declined'
-  | 'project_delivered';
+  | 'project_delivered'
+  | 'project_status_changed';
 
 /**
  * Matches the raw `notifications` row (025_create_notifications.sql).

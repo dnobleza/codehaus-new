@@ -133,6 +133,22 @@ async function updateProjectStatusAdmin(id, statusCode) {
       await projectOverviewService.generateMilestoneTemplate(id, client);
     }
 
+    // Only on an actual transition. Re-applying the status a project already
+    // has is a no-op for the client, and notifying would let a repeated admin
+    // save spam their inbox with "is now In Development" over and over.
+    if (project.status_code !== statusCode) {
+      const status = await projectStatusesRepo.findByCode(statusCode, client);
+      await notificationsService.notify(
+        {
+          userId: project.client_id,
+          eventType: 'project_status_changed',
+          projectId: id,
+          context: { projectTitle: project.title, statusLabel: status?.label ?? statusCode },
+        },
+        client
+      );
+    }
+
     await client.query('COMMIT');
     logger.info(`${TAG} Project ${id} status set to ${statusCode}`);
     return updated;

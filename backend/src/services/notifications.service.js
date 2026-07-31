@@ -65,6 +65,13 @@ const EVENT_BUILDERS = {
     body: `${projectTitle} has been marked delivered. Thank you for working with us!`,
     link: `/client/dashboard/projects/${projectId}`,
   }),
+  // Uses the human-readable label from the project_statuses lookup table
+  // ("In Development") rather than the raw code ("in_development").
+  project_status_changed: ({ projectId, projectTitle, statusLabel }) => ({
+    title: 'Project update',
+    body: `${projectTitle} is now ${statusLabel}.`,
+    link: `/client/dashboard/projects/${projectId}`,
+  }),
 };
 
 /**
