@@ -1,42 +1,38 @@
+import { Link } from 'react-router-dom';
+
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
-import { formatPHP, toNumber } from '@/shared/utils/currency';
-import { formatTimelineRange } from '@/shared/utils/timeline';
-import type { ApiError } from '@/shared/api/apiClient';
+import { formatPHP } from '@/shared/utils/currency';
 import { useProject } from '../api/projects.queries';
 import { ProjectStatusStepper } from './ProjectStatusStepper';
-import {
-  useAcceptQuotation,
-  useRejectQuotation,
-} from '@/modules/quotations/api/quotations.queries';
-import { QuotationSummaryCard } from '@/modules/quotations/components/QuotationSummaryCard';
 import { useProjectPayments } from '@/modules/payments/api/payments.queries';
 import { PaymentForm } from '@/modules/payments/components/PaymentForm';
-import { PaymentReceiptCard } from '@/modules/payments/components/PaymentReceiptCard';
 
 interface InvoicesTabProps {
   projectId: string;
 }
 
 /**
- * Invoices tab: the project's quotation-review + proof-of-payment flow.
- * This is a straight extraction of what used to be the entire
- * `ProjectDetailPage` body (status stepper, quotation accept/reject,
- * payment schedule, payment method + proof-of-payment submission, polling
- * for admin-driven transitions) — behavior is unchanged, it just now lives
- * behind the Invoices tab instead of being the whole page. Self-contained
- * (fetches its own data via `projectId`) so Base UI's Tabs only mounts it
- * — and only fires its queries — once the client actually opens this tab.
+ * Invoices tab: the project's proof-of-payment flow — status stepper,
+ * payment-status alerts, and the payment method + proof-of-payment form.
+ *
+ * Reviewing a quotation (the itemized cost breakdown, the payment schedule,
+ * the receipt, and the accept/request-changes decision) deliberately does
+ * NOT live here — it lives in the client's Quotations section
+ * (`modules/quotations/pages/QuotationDetailPage`), so the client sees the
+ * full cost and payment commitment in one place before accepting. A `sent`
+ * quotation links out to it from here rather than duplicating the surface.
+ *
+ * Self-contained (fetches its own data via `projectId`) so Base UI's Tabs
+ * only mounts it — and only fires its queries — once the client actually
+ * opens this tab.
  */
 export function InvoicesTab({ projectId }: InvoicesTabProps) {
   const { data: project, isLoading, isError, refetch } = useProject(projectId);
   const { data: payments } = useProjectPayments(projectId);
-
-  const acceptQuotation = useAcceptQuotation(projectId);
-  const rejectQuotation = useRejectQuotation(projectId);
 
   if (isLoading) {
     return <LoadingSpinner label="Loading invoices..." />;
@@ -52,7 +48,6 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
   }
 
   const latestQuotation = project.quotations?.[0];
-  const quotationError = (acceptQuotation.error ?? rejectQuotation.error) as ApiError | null;
 
   const latestPayment = payments?.[0];
   // Sequence-ordered by the API, so `.find` naturally returns the
@@ -99,10 +94,6 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
         />
       )}
 
-      {quotationError && (
-        <Alert variant="danger" title="Something went wrong" description={quotationError.message} />
-      )}
-
       {latestQuotation && latestQuotation.status === 'draft' && (
         <Alert
           variant="info"
@@ -112,37 +103,20 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
       )}
 
       {latestQuotation && latestQuotation.status === 'sent' && (
-        <QuotationSummaryCard
-          quotationNumber={latestQuotation.quotation_number}
-          packageLabel={project.title}
-          basePrice={toNumber(latestQuotation.base_price)}
-          addonLines={(latestQuotation.addons ?? []).map((addon) => ({
-            label: addon.name,
-            amount: addon.priceAtTime,
-          }))}
-          total={toNumber(latestQuotation.total_amount)}
-          timelineLabel={formatTimelineRange(
-            latestQuotation.estimated_timeline_min_days,
-            latestQuotation.estimated_timeline_max_days,
-          )}
-          footer={
-            <>
-              <Button
-                variant="outline"
-                onClick={() => rejectQuotation.mutate(latestQuotation.id)}
-                disabled={acceptQuotation.isPending || rejectQuotation.isPending}
-              >
-                Request Changes
-              </Button>
-              <Button
-                onClick={() => acceptQuotation.mutate(latestQuotation.id)}
-                disabled={acceptQuotation.isPending || rejectQuotation.isPending}
-              >
-                {acceptQuotation.isPending ? 'Accepting...' : 'Accept Quotation'}
-              </Button>
-            </>
-          }
-        />
+        <div className="flex flex-col items-start gap-3">
+          <Alert
+            className="w-full"
+            variant="info"
+            title="You have a quotation to review"
+            description="Your cost breakdown and payment schedule are in the Quotations section."
+          />
+          <Link
+            to={`/client/dashboard/quotations/${project.id}/${latestQuotation.id}`}
+            className={buttonVariants({ size: 'sm' })}
+          >
+            Review your quotation
+          </Link>
+        </div>
       )}
 
       {latestQuotation && latestQuotation.status === 'rejected' && (
@@ -181,8 +155,6 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
             description={`${remainingInstallmentCount} installment${remainingInstallmentCount === 1 ? '' : 's'} remaining. You can submit your next payment below.`}
           />
         ) : null)}
-
-      <PaymentReceiptCard project={project} quotation={latestQuotation} payment={latestPayment} />
 
       {canSubmitPayment && nextPendingInstallment && (
         <Card className="mx-auto w-full max-w-md">
