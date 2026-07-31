@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { Bell, LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 
 import { queryClient } from '@/shared/api/queryClient';
 import { useAuthStore } from '@/shared/store/auth.store';
@@ -238,14 +238,24 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <LogOut className="size-4" aria-hidden="true" />
-            Log out
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled
+              aria-label="Notifications"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Bell className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <LogOut className="size-4" aria-hidden="true" />
+              Log out
+            </button>
+          </div>
         </header>
 
         <main id="dashboard-main-content" className="flex-1 px-4 py-8 sm:px-6 lg:px-8 lg:py-8">
