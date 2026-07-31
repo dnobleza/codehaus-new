@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-type GradientLayer = 'linear' | 'radial' | 'stripe';
+type GradientLayer = 'linear' | 'radial' | 'stripe' | 'grid';
 
 interface BrandGradientAccentProps {
   /**
@@ -22,12 +22,16 @@ interface BrandGradientAccentProps {
    */
   intensity?: 'strong' | 'subtle' | 'whisper';
   /**
-   * Which of the three decorative layers to render. Defaults to all three
+   * Which decorative layers to render. Defaults to the three original layers
    * (`['linear', 'radial', 'stripe']`) for `strong`/`subtle`, matching the
    * existing behavior, and to `['linear', 'radial']` for `whisper` (the
    * diagonal stripe reads as noise at whisper opacity over large areas).
    * Callers can also opt into a single layer — e.g. `['radial']` for a
    * bounded ambient glow behind a card — without pulling in the others.
+   * `'grid'` (new, landing page v2 — design-system.md §7.11) renders a very
+   * faint graph-paper texture and is opt-in only (never part of a default
+   * set), for hero/section backgrounds that want a subtle technical texture
+   * underneath the gradient washes.
    */
   layers?: GradientLayer[];
 }
@@ -84,6 +88,12 @@ export function BrandGradientAccent({ className, intensity = 'subtle', layers }:
             'absolute inset-0 [background-image:repeating-linear-gradient(45deg,var(--color-primary)_0,var(--color-primary)_1px,transparent_1px,transparent_14px)]',
             isWhisper ? 'opacity-[0.012]' : isStrong ? 'opacity-[0.05]' : 'opacity-[0.025]',
           )}
+        />
+      )}
+      {/* Faint graph-paper grid texture — opt-in only, landing v2 (§7.11) */}
+      {activeLayers.includes('grid') && (
+        <div
+          className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(var(--color-foreground)_1px,transparent_1px),linear-gradient(90deg,var(--color-foreground)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent_70%)]"
         />
       )}
     </div>

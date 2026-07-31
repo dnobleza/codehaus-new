@@ -5,10 +5,13 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 import { ScrollReveal } from './ScrollReveal';
 
+type PreviewKind = 'progress' | 'invoice' | 'chart' | 'chat';
+
 interface Service {
   icon: LucideIcon;
   title: string;
   description: string;
+  preview: PreviewKind;
 }
 
 const SERVICES: Service[] = [
@@ -17,31 +20,113 @@ const SERVICES: Service[] = [
     title: 'Project delivery',
     description:
       'Track every engagement from kickoff to launch with milestones, statuses, and team assignments your clients can actually follow.',
+    preview: 'progress',
   },
   {
     icon: FileText,
     title: 'Quotations',
     description:
       'Send polished, itemized quotes in minutes and let clients approve them online — no more back-and-forth over email.',
+    preview: 'chart',
   },
   {
     icon: Receipt,
     title: 'Invoicing & payments',
     description:
       'Convert approved quotes into invoices automatically, track outstanding balances, and record payments in one place.',
+    preview: 'invoice',
   },
   {
     icon: MessageSquare,
     title: 'Client collaboration',
     description:
       'Keep conversations tied to the project they belong to, with notifications that keep everyone — client and team — in the loop.',
+    preview: 'chat',
   },
 ];
+
+/**
+ * Small mocked UI fragment rendered at the bottom of each Services card
+ * (design-system.md §7.12 "feature mini-preview"). Purely decorative,
+ * hand-rolled with existing tokens — no chart library involved.
+ */
+function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
+  if (kind === 'progress') {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg bg-secondary/50 p-3">
+        {[
+          { label: 'Storefront revamp', value: 80 },
+          { label: 'Mobile app v2', value: 45 },
+        ].map((row) => (
+          <div key={row.label} className="flex flex-col gap-1">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span className="truncate">{row.label}</span>
+              <span>{row.value}%</span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${row.value}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (kind === 'chart') {
+    const bars = [40, 65, 50, 85, 60];
+    return (
+      <div className="flex h-16 items-end gap-1.5 rounded-lg bg-secondary/50 p-3">
+        {bars.map((height, index) => (
+          <div
+            key={index}
+            className="flex-1 rounded-t-sm bg-gradient-to-t from-primary to-accent/60"
+            style={{ height: `${height}%` }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (kind === 'invoice') {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg bg-secondary/50 p-3">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="font-medium text-foreground">Invoice #1042</span>
+          <span className="rounded-full bg-success/10 px-2 py-0.5 text-[9px] font-medium text-success">
+            Paid
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>Nimbus Labs</span>
+          <span className="font-semibold text-foreground">$4,250.00</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 rounded-lg bg-secondary/50 p-3">
+      <div className="max-w-[80%] rounded-lg rounded-bl-sm bg-card px-2.5 py-1.5 text-[10px] text-foreground shadow-sm">
+        Quote looks great, approving now.
+      </div>
+      <div className="ml-auto max-w-[80%] rounded-lg rounded-br-sm bg-primary/90 px-2.5 py-1.5 text-[10px] text-primary-foreground">
+        Awesome — kicking off Monday.
+      </div>
+    </div>
+  );
+}
 
 export function Services() {
   return (
     <section id="services" className="relative bg-background py-24 sm:py-32">
-      <BrandGradientAccent intensity="whisper" className="inset-x-0 top-0 -z-10 h-[28rem]" />
+      <BrandGradientAccent
+        intensity="whisper"
+        layers={['linear', 'radial', 'grid']}
+        className="inset-x-0 top-0 -z-10 h-[28rem]"
+      />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="mx-auto max-w-2xl text-center">
@@ -68,6 +153,9 @@ export function Services() {
                   </div>
                   <CardTitle className="text-base font-semibold">{service.title}</CardTitle>
                   <CardDescription>{service.description}</CardDescription>
+                  <div className="mt-4">
+                    <FeatureMiniPreview kind={service.preview} />
+                  </div>
                 </CardHeader>
               </Card>
             </ScrollReveal>

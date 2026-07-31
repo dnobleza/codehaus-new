@@ -38,7 +38,9 @@ CodeHaus already has a partial token implementation in `frontend/src/index.css` 
 | Secondary Foreground | *(no brand hex defined)* | `--secondary-foreground` | `oklch(0.205 0 0)` (≈ `#171717`) | Pairs with `--secondary`; keep as-is. |
 | Muted surface | *(no brand hex defined)* | `--muted` | `oklch(0.97 0 0)` | Same value as `--secondary`; used for hover states on ghost/outline buttons and table row hover. Keep as-is. |
 | Danger | `#DC2626` | `--destructive` | `oklch(0.577 0.245 27.325)` (≈ `#DC2626`–`#E23636` red) | **Matches closely.** The existing `--destructive` oklch value renders as essentially the same red as brand Danger. Treat as equivalent; no change required. |
-| Success | `#16A34A` | *(none)* | — | **New token to add.** No success/positive token exists in `index.css` today. Add `--success: #16A34A` and `--success-foreground: #FFFFFF` (or a light tint for badge backgrounds — see §5). |
+| Success | `#22C55E` | `--success` | `#22c55e` | **Matches.** Superseded from an earlier `#16A34A` spec during the landing-page v2 redesign (§7.11) to match the client-specified palette; `index.css` now carries the `#22C55E` value directly. |
+| Accent | `#7C3AED` | `--accent` | `#7c3aed` | **New, landing-page v2 (§7.11).** Violet accent used sparingly for gradient stops and decorative highlights (feature mini-previews, workflow icon glows) — never as a primary action color, which remains `--primary`. Pairs with `--accent-foreground` (`#FFFFFF`) for text placed on a solid accent fill. |
+| Secondary (brand ink) | `#0F172A` | `--brand-ink` | `#0f172a` | **New, landing-page v2 (§7.11).** Deliberately named `--brand-ink` rather than `--secondary` to avoid colliding with the existing `--secondary`/`--secondary-foreground` pair below (the light-gray UI surface used by the Button `secondary` variant app-wide, unrelated to this value). `--brand-ink` is a decorative dark surface used only for landing-page dark chrome — the product-showcase laptop bezel and the closing-CTA panel — paired with `--brand-ink-foreground` (`#F8FAFC`) for text on it. |
 | Warning | `#F59E0B` | *(none)* | — | **New token to add.** No warning token exists today. Add `--warning: #F59E0B`. Because this color fails text-contrast requirements on white (see §5 Accessibility Notes), also add `--warning-foreground-on-light: #92400E` (a dark amber) for any case where warning-colored *text* is needed on a light background; `#F59E0B` itself should be reserved for fills, icons, and borders. |
 | Danger (as new semantic pairing) | `#DC2626` | *(none, reuse `--destructive`)* | — | No separate `--danger` token is needed; `--destructive` already covers this role. Keep a single source of truth and do not introduce a duplicate variable. |
 | Info | `#0EA5E9` | *(none)* | — | **New token to add.** No info token exists today. Add `--info: #0EA5E9`. Like Warning, this color fails text contrast on white; add `--info-foreground-on-light: #0369A1` for text use, reserving `#0EA5E9` for fills/icons/borders. |
@@ -56,7 +58,9 @@ CodeHaus already has a partial token implementation in `frontend/src/index.css` 
 | Body / heading text | `--foreground` (canonical `#111827`) |
 | Secondary / muted text | `--muted-foreground` (canonical `#6B7280`) |
 | Borders, dividers, input outlines | `--border` / `--input` (canonical `#E5E7EB`) |
-| Positive / success state | `--success` (`#16A34A`, new) |
+| Positive / success state | `--success` (`#22C55E`) |
+| Accent / decorative highlight (landing only) | `--accent` (`#7C3AED`, new) |
+| Dark decorative surface (landing only) | `--brand-ink` (`#0F172A`, new) |
 | Caution / warning state | `--warning` (`#F59E0B`, new; text use `#92400E`) |
 | Destructive / error state | `--destructive` (canonical `#DC2626`) |
 | Informational state | `--info` (`#0EA5E9`, new; text use `#0369A1`) |
@@ -469,7 +473,7 @@ Breakpoints as defined in §1.4: `sm` 640px, `md` 768px, `lg` 1024px, `xl` 1280p
 | White text on Primary `#2563EB` fill (button labels) | ≈ 5.17:1 (same pair, reversed) | Passes AA comfortably. |
 | Secondary Text `#6B7280` on white | ≈ 4.83:1 | Passes AA for normal text, but only marginally. Do not additionally reduce opacity or apply this color at sizes below 14px. |
 | Danger `#DC2626` on white (status text, error copy) | ≈ 4.83:1 | Passes AA for normal text. Safe for inline error messages and destructive text. |
-| Success `#16A34A` on white | ≈ 3.30:1 | **Fails** AA for normal text (needs 4.5:1); passes the 3:1 threshold for large text (≥18.66px regular or ≥14px bold) and for non-text UI elements (icons, borders). **Rule:** never use `#16A34A` as small body text on a white/light background — use it for icons, badge text (Badge already pairs it on a tinted 10% background, which is a decorative/iconographic context, not body copy), progress bars, and borders only. |
+| Success `#22C55E` on white | ≈ 2.35:1 | **Fails** AA even for large text (superseded from the earlier `#16A34A` value at ≈3.30:1, which passed at large-text/non-text sizes — the lighter `#22C55E` client-specified value does not). **Rule:** never use `#22C55E` as text color on a white/light background at any size — use it for icons, badge text on a tinted background (Badge/Alert already pair it on a `/8`–`/10` opacity tint, a decorative context, not body copy), progress bars, and borders only. |
 | Warning `#F59E0B` on white | ≈ 2.15:1 | **Fails** AA even for large text. **Rule:** never use as text color on light backgrounds. Reserve for fills, icon color, and borders; use `#92400E` (defined in §1.1) whenever warning-colored text is required. |
 | Info `#0EA5E9` on white | ≈ 2.77:1 | **Fails** AA for text. Same rule as Warning: use `#0369A1` (defined in §1.1) for any text application; `#0EA5E9` is fill/icon/border-only. |
 
@@ -497,13 +501,18 @@ Precise values for implementation, consolidated for quick reference:
 
 **Color tokens to add to `index.css`** (new CSS custom properties, alongside the existing `:root` block, then registered in `@theme inline` following the existing pattern for `--color-*`):
 ```
---success: #16A34A;
+--success: #22C55E;
 --warning: #F59E0B;
 --warning-foreground-on-light: #92400E;
 --info: #0EA5E9;
 --info-foreground-on-light: #0369A1;
 --primary-hover: #1D4ED8;
+--accent: #7C3AED;
+--accent-foreground: #FFFFFF;
+--brand-ink: #0F172A;
+--brand-ink-foreground: #F8FAFC;
 ```
+`--accent` and `--brand-ink` (with their `-foreground` pairs) were added during the landing-page v2 redesign (§7.11) — both are implemented in `index.css` today. `--accent` is a decorative violet used sparingly for gradient/illustration highlights; `--brand-ink` is a decorative dark surface for landing-only dark chrome (product-showcase laptop bezel, closing-CTA panel). Neither replaces or aliases `--secondary`/`--secondary-foreground`, which remain the app-wide light-gray UI surface token.
 
 **Color token to correct:** `--primary` should be updated from `oklch(0.205 0 0)` to the brand blue. Either supply the hex directly (`--primary: #2563EB;`) or convert to `oklch` for consistency with the file's existing format — the perceptual-space conversion of `#2563EB` is approximately `oklch(0.51 0.19 260)`; a design/engineering sign-off on the exact conversion is recommended before committing it, since small `oklch` rounding differences are visually detectable at this saturation.
 
@@ -535,7 +544,7 @@ Precise values for implementation, consolidated for quick reference:
 
 ## 7. Landing Page Visual Treatment
 
-Version 1.1 addendum. Scope: `frontend/src/modules/marketing/**` only (`LandingPage.tsx` and its `components/` — Navbar, Hero, Services, Pricing, About, Contact, Footer). Nothing in this section applies to the authenticated app shell (Sidebar, dashboards, `auth`, etc.).
+Version 1.2. Scope: `frontend/src/modules/marketing/**` only (`LandingPage.tsx` and its `components/` — Navbar, Hero, ProductShowcase, Services, Workflow, SocialProof, Testimonials, Pricing, ClosingCta, About, Contact, Footer). Nothing in this section applies to the authenticated app shell (Sidebar, dashboards, `auth`, etc.). §7.1–§7.10 below are the original v1.1 "reskin" pass (glass/gradient treatment of the existing sections) and remain accurate as implemented. §7.11 onward is the v1.2 addendum: a full visual overhaul to a premium SaaS-tier landing page (split hero with product showcase, new Workflow/SocialProof/Testimonials/ClosingCta sections, feature mini-previews), built strictly on top of the v1.1 token/gradient system rather than replacing it.
 
 **Direction.** Move the landing page from "flat sections with one decorative panel behind the Hero" to a single coherent light/glass system that reads as more elegant and premium, in the vein of suzzyai.com's formula — light neutral base, one saturated brand accent expressed through gradients/glass rather than flat color blocks, frosted translucent header, generous whitespace — reimplemented with **our** brand blue (`--primary` / `#2563EB`) and **our** existing primitives (`BrandGradientAccent`, `Card`, `Button`, the documented spacing/radius/shadow scale). This is a reskin, not a new design language: every recommendation below extends a token or component that already exists in §1–§2 rather than inventing a parallel one.
 
@@ -689,3 +698,94 @@ Consolidated for quick reference — all values above, gathered in one place:
 - Text contrast is unaffected by any change in this section: no text color changes are proposed, and all new background washes stay in the `/[0.01]`–`/[0.08]` opacity range against `--background`/`--card`, well below any threshold that would visibly shift the existing AA-passing pairings documented in §5.
 - The Navbar's `backdrop-blur-xl` + `bg-background/60` change must be checked against the existing `border-primary/10` hairline and nav-link text in a real browser once implemented — translucent headers can occasionally reduce effective contrast if content scrolls directly beneath a link; if any nav link fails contrast against a busy hero background, raise `bg-background/60` to `bg-background/70` rather than removing the blur.
 - New hover/translate micro-interactions (Services/Pricing/About cards, Navbar link underline) must respect `prefers-reduced-motion` consistent with the existing `ScrollReveal`/`motion` usage already in these files — apply the same reduced-motion handling already established for the page's `framer-motion` animations (no new motion library or pattern introduced).
+
+### 7.11 v1.2 premium redesign — overview and new tokens
+
+Direction: move from the v1.1 "reskin" (glass/gradient treatment of otherwise-wireframe sections) to a full premium SaaS-tier visual language, in the vein of Stripe/Linear/Framer/Vercel/Notion/Raycast — a split hero with a realistic product showcase, richer feature cards, a visual workflow timeline, and dedicated social-proof and closing-CTA moments. Still governed by the v1.1 hard constraints (§7 intro): `--background` Alice Blue stays the literal page background everywhere, `font-poppins` scoping is unchanged, no new dependencies, and `BrandGradientAccent`/`GlowOrb` remain the only two decorative-layer mechanisms (no third gradient system introduced).
+
+**New color tokens** (implemented in `index.css`, reconciled into §1.1's palette table above): `--accent` (`#7C3AED`) / `--accent-foreground`, and `--brand-ink` (`#0F172A`) / `--brand-ink-foreground`. `--success` was also updated from `#16A34A` to `#22C55E` per the client-specified palette for this redesign (§1.1, §5).
+
+**`BrandGradientAccent` extension:** a fourth opt-in layer, `'grid'` (`frontend/src/shared/components/common/BrandGradientAccent.tsx`), renders a very faint (5% opacity) graph-paper grid texture masked to fade out via a radial mask, for hero/section backgrounds that want subtle technical texture under the gradient wash. Never included in any layer default set — callers opt in explicitly (e.g. `layers={['linear', 'radial', 'stripe', 'grid']}`).
+
+**New sibling component — `GlowOrb`** (`frontend/src/shared/components/common/GlowOrb.tsx`): a single blurred, softly glowing color circle (`absolute rounded-full blur-3xl` + a brand-color background at reduced opacity), for one or two freely-positioned ambient light blobs within a section (product showcase, closing CTA). Distinct from `BrandGradientAccent`, which is a layered full-bleed wash system — `GlowOrb` is the lighter-weight primitive for a single positioned glow. `color` prop: `'primary' | 'accent' | 'success'`.
+
+**Animation approach:** all motion continues to use Framer Motion exclusively (no new library), consistent with the existing `ScrollReveal` scroll-triggered pattern and Hero's `initial`/`animate`/`transition` prop usage. The new continuously-looping "float" animation on the product-showcase widgets (§7.12) is gated behind Framer Motion's `useReducedMotion()` hook — when the user has `prefers-reduced-motion` set, the loop is skipped entirely (the hook returns `true` and the component omits the `animate`/`transition` props rather than rendering a static final frame with a suppressed transition), rather than merely shortening the loop.
+
+### 7.12 Hero split layout + Product Showcase (new component)
+
+`Hero.tsx` moves from a centered single-column layout to a two-column split (`grid lg:grid-cols-2`, stacking to one column below `lg`): left column keeps the existing eyebrow badge, H1, lead paragraph, and both CTAs verbatim (copy unchanged — only the layout wrapper changes, from `text-center items-center` to `text-center items-center lg:text-left lg:items-start`), right column renders the new `ProductShowcase` component in place of the old flat "Product preview" placeholder div.
+
+The Hero `<section>` changes `overflow-hidden` to `overflow-x-clip` (clips the gradient washes' horizontal bleed exactly as before, but no longer clips vertical overflow) and gains `z-10` (`relative z-10`), so the showcase's intentional bottom bleed (below) paints above the Services section's opaque background rather than being hidden behind it. The Hero content grid's bottom padding is reduced (`pb-8 sm:pb-12 lg:pb-16`, vs. the unchanged top padding `pt-20 sm:pt-28 lg:pt-32`) to leave room for that bleed without an oversized gap above the fold.
+
+**`ProductShowcase.tsx`** (new, `frontend/src/modules/marketing/components/`):
+- **Laptop mockup:** a dark bezel (`bg-brand-ink`, `rounded-t-2xl`) with a 3-dot browser-chrome row and a URL pill, framing a mocked CodeHaus dashboard: a 4-icon mini sidebar, 3 stat tiles (Projects/Quotations/Revenue), a 7-bar gradient revenue chart, and a 3-row task list with check states. A tapered "hinge" bar (`bg-brand-ink`, gradient + a narrower foot beneath it) sits below the screen for a believable laptop silhouette. All content is mock data, not a live dashboard.
+- **Floating widget cards:** 4 absolutely-positioned glass cards (`bg-card/80`, `backdrop-blur-md`, `shadow-xl`, `ring-1 ring-foreground/8`, `rounded-xl`, `p-3`) placed at the four corners of the laptop, each with a tinted icon tile (10% tone background, per `primary`/`success`/`accent`) + a label/value pair: Revenue +18%, Invoice Paid, New Client, Project Approved. Two of the four (`New client`, `Revenue`) are hidden below `md`/`sm` respectively so the mobile/tablet layout doesn't overlap — the brief's "reflow inline or hide the least essential" responsive rule, applied by hiding rather than reflowing, since these are supplementary decoration, not primary content. Each widget's icon+text group runs an independent Framer Motion float loop (`y: [0, -10, 0]`, 5s, staggered delay per widget) for an organic, non-synchronized floating effect, gated by `useReducedMotion()` per §7.11.
+- **Bleed into Services:** the showcase's outer wrapper carries a negative bottom margin (`-mb-20 sm:-mb-28 lg:-mb-32`) larger than the Hero grid's remaining bottom padding, so its lower portion (the laptop hinge/foot and the two bottom floating widgets) visually overlaps the top of the Services section, per the brief's "laptop should slightly overlap into the next section" requirement. Two `GlowOrb` instances (`primary`, `accent`) sit behind the laptop for ambient light.
+
+### 7.13 Feature mini-previews (Services)
+
+Each `Services.tsx` card gains a small mocked UI fragment beneath its existing icon/title/description (`FeatureMiniPreview`, a private sub-component within `Services.tsx`, selected per-card via a `preview: 'progress' | 'chart' | 'invoice' | 'chat'` field), rendered inside a `rounded-lg bg-secondary/50 p-3` frame consistent with the card's existing spacing scale:
+- **Project delivery → `progress`:** two labeled progress bars (`h-1.5 rounded-full bg-muted` track, `bg-primary` fill).
+- **Quotations → `chart`:** a 5-bar mini bar chart, `bg-gradient-to-t from-primary to-accent/60` — the one place `--accent` appears as a gradient stop, per §7.11's "sparingly, decorative only" rule.
+- **Invoicing & payments → `invoice`:** a compact invoice row (number, a `Paid` success badge, client name, amount).
+- **Client collaboration → `chat`:** two stacked chat bubbles (incoming `bg-card`, outgoing `bg-primary/90 text-primary-foreground`), rounded with one flattened corner each per standard chat-bubble convention.
+
+The Services background wash gains the new `'grid'` layer (`layers={['linear', 'radial', 'grid']}`) for a touch of technical texture behind the now busier card grid.
+
+### 7.14 Workflow timeline (new section)
+
+**`Workflow.tsx`** (new, placed between Services and SocialProof in `LandingPage.tsx`): a 7-step pipeline — Quote → Proposal → Project → Task → Invoice → Payment → Completed — each step a 48px (`size-12`) circular icon badge (`bg-card`, `shadow-md`, `ring-1 ring-foreground/8`, icon in `--primary`) with a title (14px/weight 600) and an 12px/`--muted-foreground` description beneath.
+
+- **Desktop (`lg` and up):** horizontal, `grid-cols-7`, with a full-width connecting line (`h-px`, a transparent → `--border` → transparent gradient) positioned behind the icon row (`top-6`, matching half the icon badge's height so the line passes through its center).
+- **Mobile/tablet (below `lg`):** vertical, a single column with a `w-px` connecting line down the left edge (same transparent → `--border` → transparent gradient, rotated to vertical) behind a left-aligned icon column, content to the right.
+- Each step reveals via `ScrollReveal` with a per-index stagger delay (`index * 0.07` desktop, `index * 0.06` mobile), consistent with the existing Services/Pricing stagger pattern.
+- Section background: a single `BrandGradientAccent` `whisper`/`['radial']` wash centered vertically (`top-1/2 -translate-y-1/2`) behind the whole section, distinct from Services'/Pricing's top-anchored washes since Workflow's focal content (the line) runs through its vertical center.
+
+### 7.15 Social proof, stats, and testimonials (new section)
+
+**`SocialProof.tsx`** (new): a single `<section id="social-proof">` containing, top to bottom: an eyebrow-style trust line ("Trusted by software agencies of every size"), a placeholder client-logo row (six text wordmarks, `grayscale` + 60%-opacity `--muted-foreground` at rest, full color + full opacity on hover), a **stat tile** row, and the `Testimonials` block.
+- **Stat tile** (new component spec): `rounded-xl bg-card/70 p-8 text-center shadow-sm ring-1 ring-foreground/8 backdrop-blur-sm`, hover `shadow-md ring-primary/15` — the same glass-card language as About's stat blocks (§7.6) — containing a tinted icon tile (`bg-primary/10 text-primary`, `size-11`, `rounded-lg`), a 30px/weight 700 value, and a 14px `--muted-foreground` label. Values: 50+ Projects delivered, 99% Client satisfaction, 7+ Years of experience.
+
+**`Testimonials.tsx`** (new, rendered inside `SocialProof`'s section rather than as its own top-level `LandingPage` section, since it's conceptually one "social proof" moment): a 3-column grid (1 column mobile, 3 columns `md`+) of **testimonial cards** (new component spec) — the same elegant-card treatment as Services/Pricing (§7.4: `shadow-sm ring-1 ring-foreground/8`, hover `-translate-y-1 shadow-lg ring-primary/15`), containing a `Quote` icon (`text-primary/40`), the quote text (14px, `leading-6`), and a footer row above a `border-t border-border/60` divider: a 36px (`size-9`) circular initials avatar (`bg-primary/10 text-primary`, matching the Avatar fallback spec in §2.10) plus name (14px/weight 500) and role (12px `--muted-foreground`).
+
+### 7.16 Pricing — unchanged
+
+No changes were made to `Pricing.tsx` in the v1.2 pass. The v1.1 spec (§7.5) — highlighted "Studio" tier with a bounded `strong`/`['radial']` glow, `ring-2 ring-primary shadow-xl lg:scale-105`, and the gradient "Most popular" badge — already satisfies the v1.2 brief's pricing requirement ("refine the existing highlighted treatment... this mostly already exists, polish don't rebuild") and was left as-is.
+
+### 7.17 Closing CTA (new section)
+
+**`ClosingCta.tsx`** (new, placed between Pricing and About in `LandingPage.tsx` — the page's final dedicated conversion moment before the lower-intent About/Contact sections and the Footer): a full-width dark panel, distinct from every other section on the page (which all sit on `--background`), using the new `--brand-ink` token specifically for this reason — it needs to read as the page's single highest-contrast, most attention-grabbing moment.
+
+- Panel: `rounded-3xl bg-brand-ink shadow-2xl`, containing a `strong`/`['radial']` `BrandGradientAccent` glow plus two `GlowOrb` instances (`accent` top-left, `primary` bottom-right) for ambient light against the dark surface.
+- Content: H2 "Ready to scale your agency?" (`text-brand-ink-foreground`, same `text-3xl sm:text-4xl` scale as every other section), a supporting line ("Build faster with CodeHaus...", `text-brand-ink-foreground/70`), and two CTAs — a primary "Get started free" button (identical glow treatment to Hero/Navbar's primary CTA, §7.2/§7.3) and a secondary "Book a demo" outline button restyled for the dark surface (`border-brand-ink-foreground/20`, transparent fill, `text-brand-ink-foreground`) that scroll-links to `#contact` (`render={<a href="#contact" />}` on the shared `Button`, the same base-ui `render`-prop polymorphism pattern already used elsewhere in the codebase) rather than navigating to a nonexistent route.
+- The whole panel reveals via `ScrollReveal` as a single unit (not per-child stagger), since it's one focal composition rather than a list.
+
+### 7.18 Section order (`LandingPage.tsx`)
+
+Hero → Services → Workflow → SocialProof (logos, stats, testimonials) → Pricing → ClosingCta → About → Contact → *(Footer, rendered by `LandingLayout`, outside `LandingPage`)*. Workflow and SocialProof were inserted between Services and Pricing so the page builds product understanding and trust before the pricing ask; ClosingCta sits immediately after Pricing as the page's dedicated closing conversion moment, ahead of the lower-intent About/Contact sections that remain for users who want more context before converting.
+
+### 7.19 Interactive hero pass — laptop motion, screen cycle, parallax
+
+A follow-up pass on top of §7.12's Hero/Product Showcase: the CSS-built laptop mockup (still hand-built from `div`s — no external laptop PNG was ever introduced) becomes the page's centerpiece via continuous motion, a looping screen-content transition, independently-animated floating cards, mouse parallax, and a reusable button ripple. No new dependencies — everything below is Framer Motion (already the only animation library in use) plus the existing `GlowOrb`/`BrandGradientAccent` primitives.
+
+**Layered composition rule.** Wherever an element needs two motion behaviors driven by two different mechanisms (e.g. a one-shot scroll entrance *and* an infinite ambient loop, or an ambient loop *and* a pointer-reactive tilt), the two behaviors live on **separate nested `motion` elements** rather than both targeting the same transform key on one element — Framer Motion doesn't merge two competing sources of truth for one key predictably. Different keys (e.g. entrance `y` + parallax `x`) *can* safely share one element. This rule governs every composition below.
+
+**Laptop continuous motion** (`ProductShowcase.tsx`): the laptop assembly is four nested layers, outermost to innermost —
+1. A plain `div` with `style={{ perspective: 1400 }}` establishing the 3D context (not a `motion` element).
+2. A pointer-parallax layer (`style`-driven `rotateY`/`rotateX`/`scale` motion values only, spring-smoothed — see "Mouse parallax" below). Carries `transform-style: preserve-3d` so 3D depth propagates to its descendants.
+3. A one-shot scroll-entrance layer (`initial`/`whileInView` only: `opacity`, `y`, `scale`, `rotate` settling from a few degrees off-axis to 0 — the "rotates into place" entrance). Also `preserve-3d`.
+4. An ambient infinite-loop layer (`animate` only, gated by `useReducedMotion()`): `y` floats 12–18px, `rotate` sweeps -4°→4°, `rotateX` adds a slight 3-degree 3D tilt, all `easeInOut`, 8s loop, `will-change-transform`.
+
+**Screen content transition** (new `LaptopScreen.tsx`): an infinite cross-fade cycle between the mocked dashboard and a centered CodeHaus icon, driven by a `ScreenPhase` state machine (`'dashboard' | 'transition-out' | 'logo' | 'transition-in'`) with `useEffect`-scheduled timers — not CSS `@keyframes`. Timing: dashboard holds 4.8s → 550ms transition buffer (matches the `AnimatePresence mode="wait"` cross-fade duration) → logo holds 2.6s (icon on a `GlowOrb` glow, breathing `scale: [1, 1.06, 1]` pulse on its own inner element so the pulse never fights the outer enter/exit scale) → 550ms buffer → back to dashboard. `AnimatePresence mode="wait"` guarantees the two states are never simultaneously visible (sequential fade-out-then-fade-in, no hard cut). The screen container has a fixed, non-animated height (`h-64 sm:h-72`) so the bezel never resizes as content cross-fades — both variants are absolutely positioned within it. Reduced motion: the cycle never starts; `DashboardGrid` (the shared dashboard markup, reused by both the animated and static paths) renders once, statically.
+
+**Floating widget cards** (`ProductShowcase.tsx`, `FloatingWidgetCard`): each of the 4 `WIDGETS` now carries its own `floatDuration` (5.4–7s), `rotateRange` (±2° to ±4°), `xDrift` (±5–8px), and `parallaxIntensity` (8–20px) in addition to the existing `floatDelay` stagger, so no two cards move in visual sync. Two motion layers per card: an outer layer owns the absolute corner position, the one-shot `whileInView` entrance (`opacity`/`y`), and the pointer-parallax `x` offset (a `style` motion value); an inner layer owns the infinite ambient loop (`animate`: `y`/`rotate`/`x`-drift together, since it's an isolated element these never collide with the outer layer's `x`). `FloatingWidgetCard` is its own component (not inlined in the `.map()`) specifically so each instance can call its own `useTransform` hook — hooks cannot be called inside a loop body.
+
+**Mouse parallax** (`ProductShowcase.tsx`): a single `onPointerMove`/`onPointerEnter`/`onPointerLeave` handler set on the showcase's root container, gated to `event.pointerType === 'mouse'` (desktop/pointer-capable only). Raw pointer position is written to two `useMotionValue`s (normalized to roughly `[-0.5, 0.5]` across the container), then smoothed through a shared `useSpring` config (`stiffness: 150, damping: 20, mass: 0.4`) before being mapped via `useTransform` into the laptop's `rotateY`/`rotateX` and each widget's `x` offset. Because these are Framer motion values (not `useState`), setting them on every pointer event does not trigger a React re-render — satisfying the 60fps/no-raw-setState perf constraint without manual `requestAnimationFrame` throttling. Hover also springs the laptop's `scale` to `1.035` (reset to `1` on pointer leave); the bezel's shadow bloom on hover is a separate, plain Tailwind `hover:shadow-[...]` transition (box-shadow isn't a transform, so it composes safely alongside the JS-driven parallax without fighting it).
+
+**Scroll-into-view entrance**: the laptop's entrance (§ above) and each widget's entrance both converted from mount-time `initial`/`animate` to `initial`/`whileInView` (`viewport={{ once: true }}`), so they fire correctly if Hero is ever not the first thing painted. The two `GlowOrb` instances behind the laptop, and a new drifting glow in `HeroBackgroundEffects` (below), are each wrapped in a small `motion.div` that bumps `opacity`/`scale` up via the same `whileInView` trigger — the "background glow intensifies on scroll into view" beat.
+
+**Button ripple, hover, and focus** (`components/ui/button.tsx`, `Hero.tsx`): the shared `Button` component (not a one-off hack in Hero) now renders a click-origin ripple — a `motion.span` per click, sized to the button's diagonal, self-removing via `onAnimationComplete`, skipped entirely under `useReducedMotion()`. Reusable across every variant/size, since it lives in `buttonVariants`'s consuming component rather than the call site. The two Hero CTAs additionally get a hover lift + glow (`hover:-translate-y-0.5 hover:scale-[1.02]`, plus an extended box-shadow bloom on the primary CTA) and a small `active:scale-[0.99]` press-in, layered as plain Tailwind transitions (not motion values) since they don't need spring physics. The existing `focus-visible:ring-3 focus-visible:ring-ring/50` treatment (§2.1) is untouched — box-shadow-based focus rings aren't affected by the new `overflow-hidden` added to `buttonVariants` for the ripple, since an element's own box-shadow isn't clipped by its own `overflow-hidden`.
+
+**Background effects** (`HeroBackgroundEffects.tsx`, new): extends rather than replaces `BrandGradientAccent`/`GlowOrb` — a single slow-drifting `GlowOrb` (22s `x`/`y` loop) plus 9 small, sparse, low-opacity light specks (`bg-foreground/20`, 2–3px, independent 10–18s drift loops). Pure CSS/Framer transforms, no canvas/WebGL, all `pointer-events-none`/`aria-hidden` and kept at `-z-10` so they never obstruct text/CTA contrast (§5 WCAG notes still apply). Gated by `useReducedMotion()` — specks and drift are static placements with no loop when reduced motion is preferred.
+
+**Reduced-motion fallback, summarized**: with `prefers-reduced-motion` set, the laptop renders at its settled entrance position with no ambient loop or parallax reaction; `LaptopScreen` shows the dashboard once, statically, with no cross-fade cycle; widget cards keep their one-shot entrance but no ambient float, drift, or parallax offset; the Hero background glow/specks hold static placement with no drift; button ripple is skipped. Nothing infinite or auto-cycling ever renders under reduced motion, per the existing project-wide convention (§7.11).

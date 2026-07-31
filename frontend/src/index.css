@@ -20,11 +20,24 @@
   --ring: oklch(0.708 0 0);
 
   /* New semantic tokens per design-system.md §1.1 / §6 */
-  --success: #16a34a;
+  --success: #22c55e;
   --warning: #f59e0b;
   --warning-foreground-on-light: #92400e;
   --info: #0ea5e9;
   --info-foreground-on-light: #0369a1;
+
+  /* Landing page v2 premium palette, design-system.md §7.11 — accent violet
+     for gradient/illustration highlights (workflow, floating widgets, mini
+     chart previews) and a dark "ink" surface for decorative dark chrome
+     (product-showcase laptop bezel). Intentionally separate from
+     `--secondary`/`--secondary-foreground` above, which remain the light
+     neutral surface used by the Button `secondary` variant app-wide — these
+     two new tokens are landing-page decorative colors, not a redefinition of
+     the existing secondary-surface token. */
+  --accent: #7c3aed;
+  --accent-foreground: #ffffff;
+  --brand-ink: #0f172a;
+  --brand-ink-foreground: #f8fafc;
 
   /* Elevation / shadow scale, design-system.md §1.6 — tinted with brand Text (#111827) */
   --shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.05);
@@ -67,6 +80,10 @@
   --color-warning-foreground-on-light: var(--warning-foreground-on-light);
   --color-info: var(--info);
   --color-info-foreground-on-light: var(--info-foreground-on-light);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-ink-foreground: var(--brand-ink-foreground);
 
   --shadow-xs: var(--shadow-xs);
   --shadow-sm: var(--shadow-sm);
