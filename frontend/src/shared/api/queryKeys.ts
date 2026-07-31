@@ -38,6 +38,12 @@ export const queryKeys = {
       [...queryKeys.projects.adminAll(), 'list', filters ?? {}] as const,
     adminDetail: (id: string) => [...queryKeys.projects.adminAll(), 'detail', id] as const,
   },
+  notifications: {
+    all: ['notifications'] as const,
+    // The inbox and its unread count arrive together from GET /notifications,
+    // so there is no separate key for the badge count.
+    list: () => [...queryKeys.notifications.all, 'list'] as const,
+  },
   quotations: {
     all: ['quotations'] as const,
     // Client's own cross-project quotation list (GET /quotations). There is

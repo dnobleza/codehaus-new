@@ -5,6 +5,7 @@ const quotationsRepo = require('../repositories/quotations.repository');
 const projectStatusesRepo = require('../repositories/projectStatuses.repository');
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
 const projectOverviewService = require('./projectOverview.service');
+const notificationsService = require('./notifications.service');
 const logger = require('../utils/logger');
 const TAG = '[PROJECTS-SERVICE]';
 
@@ -157,6 +158,14 @@ async function acceptProjectAdmin(id) {
   }
 
   const updated = await projectsRepo.updateStatus(id, 'under_review');
+
+  await notificationsService.notify({
+    userId: project.client_id,
+    eventType: 'project_accepted',
+    projectId: id,
+    context: { projectTitle: project.title },
+  });
+
   logger.info(`${TAG} Project ${id} accepted -> under_review`);
   return updated;
 }
@@ -169,6 +178,14 @@ async function declineProjectAdmin(id, reason) {
   }
 
   const updated = await projectsRepo.decline(id, reason);
+
+  await notificationsService.notify({
+    userId: project.client_id,
+    eventType: 'project_declined',
+    projectId: id,
+    context: { projectTitle: project.title, reason },
+  });
+
   logger.info(`${TAG} Project ${id} declined -> cancelled`);
   return updated;
 }
@@ -193,6 +210,14 @@ async function markProjectDeliveredAdmin(id) {
   }
 
   const updated = await projectsRepo.updateStatus(id, 'delivered');
+
+  await notificationsService.notify({
+    userId: project.client_id,
+    eventType: 'project_delivered',
+    projectId: id,
+    context: { projectTitle: project.title },
+  });
+
   logger.info(`${TAG} Project ${id} marked delivered`);
   return updated;
 }

@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 
 import { queryClient } from '@/shared/api/queryClient';
 import { useAuthStore } from '@/shared/store/auth.store';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 import { useSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsed';
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
+import { NotificationBell } from '@/modules/notifications/components/NotificationBell';
 import { cn } from '@/lib/utils';
 import codehausLogo from '@/assets/codehaus-logo.svg';
 import codehausIcon from '@/assets/codehaus-icon.svg';
@@ -239,14 +240,7 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled
-              aria-label="Notifications"
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-            >
-              <Bell className="size-4" aria-hidden="true" />
-            </button>
+            <NotificationBell />
             <button
               type="button"
               onClick={handleLogout}

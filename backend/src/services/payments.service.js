@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const paymentsRepo = require('../repositories/payments.repository');
 const projectsRepo = require('../repositories/projects.repository');
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
+const notificationsService = require('./notifications.service');
 const { resolvePaymentProofPath } = require('../middleware/upload.middleware');
 const logger = require('../utils/logger');
 const TAG = '[PAYMENTS-SERVICE]';
@@ -10,6 +11,29 @@ function httpError(statusCode, message) {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+}
+
+// Notifies the client who owns a project. Takes the caller's `db` (an open
+// transaction client, or the pool) so the notification commits atomically with
+// the event that caused it -- a client must never be told their payment was
+// verified by a transaction that then rolled back.
+//
+// `notify` itself never throws (see notifications.service.js), so a failure
+// here cannot roll back the payment action it accompanies.
+async function notifyProjectClient(db, projectId, eventType, context = {}) {
+  const { rows } = await db.query('SELECT client_id, title FROM projects WHERE id = $1', [projectId]);
+  const project = rows[0];
+  if (!project) return;
+
+  await notificationsService.notify(
+    {
+      userId: project.client_id,
+      eventType,
+      projectId,
+      context: { projectTitle: project.title, ...context },
+    },
+    db
+  );
 }
 
 // A client submits a payment against whichever installment is next in
@@ -115,6 +139,10 @@ async function verifyPayment(paymentId, verifiedByUserId) {
       await projectsRepo.updateStatus(payment.project_id, 'accepted', client);
     }
 
+    await notifyProjectClient(client, payment.project_id, 'payment_verified', {
+      amount: payment.amount,
+    });
+
     await client.query('COMMIT');
     logger.info(
       `${TAG} Payment ${paymentId} verified by user ${verifiedByUserId}; installment ${installment.sequence} marked paid`
@@ -142,6 +170,8 @@ async function rejectPayment(paymentId, verifiedByUserId) {
     verifiedBy: verifiedByUserId,
     verifiedAt: new Date(),
   });
+  await notifyProjectClient(pool, payment.project_id, 'payment_rejected');
+
   logger.info(`${TAG} Payment ${paymentId} rejected by user ${verifiedByUserId}`);
   return updated;
 }
