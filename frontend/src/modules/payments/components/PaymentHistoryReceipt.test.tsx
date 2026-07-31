@@ -2,113 +2,91 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import { PaymentHistoryReceipt } from './PaymentHistoryReceipt';
-import type { Payment, PaymentInstallment } from '@/shared/types/payment.types';
+import type { PaymentListItem, ProjectInvoice } from '@/shared/types/payment.types';
 
-const installments: PaymentInstallment[] = [
-  {
-    id: 'i-1',
-    project_id: 'proj-1',
-    quotation_id: 'q-1',
-    sequence: 1,
-    percentage: '50.00',
-    amount: '25000.00',
-    due_date: '2026-07-01',
-    status: 'paid',
-    created_at: '2026-07-01',
-  },
-  {
-    id: 'i-2',
-    project_id: 'proj-1',
-    quotation_id: 'q-1',
-    sequence: 2,
-    percentage: '20.00',
-    amount: '10000.00',
-    due_date: '2026-07-08',
-    status: 'pending',
-    created_at: '2026-07-01',
-  },
-];
-
-const verifiedPayment: Payment = {
+const verifiedPayment: PaymentListItem = {
   id: 'p-1',
   project_id: 'proj-1',
-  installment_id: 'i-1',
   payment_method: 'gcash',
   amount: '25000.00',
   reference_number: 'REF123',
-  proof_of_payment_url: null,
   status: 'verified',
-  verified_by: 1,
-  verified_at: '2026-07-02',
   created_at: '2026-07-01',
+  verified_at: '2026-07-02',
+  installment_sequence: 1,
 };
 
-const pendingPayment: Payment = {
+const pendingPayment: PaymentListItem = {
   id: 'p-2',
   project_id: 'proj-1',
-  installment_id: 'i-2',
   payment_method: 'bank_transfer',
   amount: '10000.00',
   reference_number: null,
-  proof_of_payment_url: null,
   status: 'verification',
-  verified_by: null,
-  verified_at: null,
   created_at: '2026-07-08',
+  verified_at: null,
+  installment_sequence: 2,
 };
 
+function invoice(overrides: Partial<ProjectInvoice> = {}): ProjectInvoice {
+  return {
+    project_id: 'proj-1',
+    project_title: 'Business Package',
+    amount_paid: '25000.00',
+    balance_due: '10000.00',
+    payments: [verifiedPayment],
+    ...overrides,
+  };
+}
+
 describe('PaymentHistoryReceipt', () => {
-  it('renders nothing when no payments have been submitted', () => {
-    const { container } = render(
-      <PaymentHistoryReceipt payments={[]} installments={installments} />,
-    );
+  it('renders nothing when the project has no payments', () => {
+    const { container } = render(<PaymentHistoryReceipt invoice={invoice({ payments: [] })} />);
 
     expect(container).toBeEmptyDOMElement();
   });
 
   it('lists each payment with amount, method, reference, and installment', () => {
-    render(<PaymentHistoryReceipt payments={[verifiedPayment]} installments={installments} />);
+    // `getAllBy` throughout: the desktop table and the mobile list are both in
+    // the DOM at once, hidden from each other only by responsive CSS.
+    render(<PaymentHistoryReceipt invoice={invoice()} />);
 
     expect(screen.getByText('Payment Receipt')).toBeInTheDocument();
+    expect(screen.getByText('Business Package')).toBeInTheDocument();
     expect(screen.getAllByText('Downpayment').length).toBeGreaterThan(0);
     expect(screen.getAllByText('GCash').length).toBeGreaterThan(0);
     expect(screen.getAllByText('REF123').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Verified').length).toBeGreaterThan(0);
   });
 
-  it('counts only verified payments toward the amount paid', () => {
+  it('shows the server-computed amount paid and balance due', () => {
     render(
-      <PaymentHistoryReceipt
-        payments={[pendingPayment, verifiedPayment]}
-        installments={installments}
-      />,
+      <PaymentHistoryReceipt invoice={invoice({ payments: [pendingPayment, verifiedPayment] })} />,
     );
 
-    // ₱25,000 verified; the ₱10,000 still under verification must NOT count.
-    // `getAllBy` throughout: the desktop table and the mobile list are both in
-    // the DOM at once, hidden from each other only by responsive CSS.
+    expect(screen.getByText(/amount paid/i)).toBeInTheDocument();
     expect(screen.getAllByText('₱25,000').length).toBeGreaterThan(0);
+    expect(screen.getByText(/balance due/i)).toBeInTheDocument();
+    expect(screen.getAllByText('₱10,000').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/under verification/i).length).toBeGreaterThan(0);
   });
 
-  it('shows the outstanding balance from still-pending installments', () => {
-    render(<PaymentHistoryReceipt payments={[verifiedPayment]} installments={installments} />);
+  it('hides the balance row once nothing is outstanding', () => {
+    render(<PaymentHistoryReceipt invoice={invoice({ balance_due: '0.00' })} />);
 
-    expect(screen.getByText(/balance due/i)).toBeInTheDocument();
-    expect(screen.getAllByText('₱10,000').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/balance due/i)).not.toBeInTheDocument();
   });
 
   it('renders a dash for a payment with no reference number', () => {
-    render(<PaymentHistoryReceipt payments={[pendingPayment]} installments={installments} />);
+    render(<PaymentHistoryReceipt invoice={invoice({ payments: [pendingPayment] })} />);
 
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
 
-  it('falls back gracefully when a payment has no linked installment', () => {
+  it('falls back gracefully when a payment predates the installment schedule', () => {
     render(
       <PaymentHistoryReceipt
-        payments={[{ ...verifiedPayment, installment_id: null }]}
-        installments={installments}
+        invoice={invoice({ payments: [{ ...verifiedPayment, installment_sequence: null }] })}
       />,
     );
 

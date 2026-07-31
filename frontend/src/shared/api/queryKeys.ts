@@ -50,6 +50,9 @@ export const queryKeys = {
     all: ['payments'] as const,
     listByProject: (projectId: string) =>
       [...queryKeys.payments.all, 'project', projectId] as const,
+    // Client's own cross-project payment list (GET /payments), grouped by
+    // project — backs the Invoices page.
+    mine: () => [...queryKeys.payments.all, 'mine'] as const,
     // Admin/staff-scoped verification queue (GET /admin/payments).
     adminAll: () => [...queryKeys.payments.all, 'admin'] as const,
     adminList: (filters?: unknown) =>

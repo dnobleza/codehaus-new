@@ -81,13 +81,7 @@ describe('InvoicesTab', () => {
     expect(screen.queryByRole('button', { name: 'Request Changes' })).not.toBeInTheDocument();
   });
 
-  it('renders no payment receipt until a payment has been submitted', () => {
-    renderTab({ quotations: [{ ...quotation, status: 'accepted' }] });
-
-    expect(screen.queryByText('Payment Receipt')).not.toBeInTheDocument();
-  });
-
-  it('renders the payment receipt once a payment exists', () => {
+  it('never renders the payment receipt itself — that moved to the Invoices section', () => {
     vi.mocked(useProjectPayments).mockReturnValue({
       data: [
         {
@@ -106,26 +100,14 @@ describe('InvoicesTab', () => {
       ],
     } as unknown as ReturnType<typeof useProjectPayments>);
 
-    renderTab({
-      quotations: [{ ...quotation, status: 'accepted' }],
-      paymentInstallments: [
-        {
-          id: 'i-1',
-          project_id: 'proj-1',
-          quotation_id: 'q-1',
-          sequence: 1,
-          percentage: '50.00',
-          amount: '25000.00',
-          due_date: '2026-07-01',
-          status: 'paid',
-          created_at: '2026-07-01',
-        },
-      ],
-    });
+    renderTab({ quotations: [{ ...quotation, status: 'accepted' }] });
 
-    expect(screen.getByText('Payment Receipt')).toBeInTheDocument();
-    expect(screen.getAllByText('REF123').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Downpayment').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Payment Receipt')).not.toBeInTheDocument();
+    expect(screen.queryByText('REF123')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /view payment receipts/i })).toHaveAttribute(
+      'href',
+      '/client/dashboard/invoices',
+    );
   });
 
   it('links a sent quotation out to the quotations section', () => {

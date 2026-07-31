@@ -28,7 +28,7 @@ export const CLIENT_NAV_ITEMS: DashboardNavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/client/dashboard' },
   { label: 'Projects', icon: FolderKanban, path: '/client/dashboard/projects' },
   { label: 'Quotations', icon: FileText, path: '/client/dashboard/quotations' },
-  { label: 'Invoices', icon: Receipt, disabled: true },
+  { label: 'Invoices', icon: Receipt, path: '/client/dashboard/invoices' },
   { label: 'Payments', icon: CreditCard, disabled: true },
   { label: 'Messages', icon: MessageSquare, disabled: true },
   { label: 'Notifications', icon: Bell, disabled: true },

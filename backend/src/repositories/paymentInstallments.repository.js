@@ -57,4 +57,27 @@ async function countForProject(projectId, db = pool) {
   return rows[0].count;
 }
 
-module.exports = { insert, listByProject, findNextPending, setPaid, countPending, countForProject };
+// Outstanding balance per project for one client: the sum of every installment
+// still `pending`. One grouped query rather than a per-project round trip, so
+// the Invoices page stays a fixed two queries regardless of project count.
+async function outstandingBalanceByClient(clientId, db = pool) {
+  const { rows } = await db.query(
+    `SELECT pi.project_id, SUM(pi.amount)::numeric AS balance_due
+     FROM payment_installments pi
+     JOIN projects pr ON pr.id = pi.project_id
+     WHERE pr.client_id = $1 AND pi.status = 'pending'
+     GROUP BY pi.project_id`,
+    [clientId]
+  );
+  return rows;
+}
+
+module.exports = {
+  insert,
+  listByProject,
+  findNextPending,
+  setPaid,
+  countPending,
+  countForProject,
+  outstandingBalanceByClient,
+};

@@ -173,9 +173,61 @@ async function resolveProofForAccess({ projectId, paymentId, requestingUser }) {
   };
 }
 
+// Backs the client's Invoices page: every payment the client has made,
+// grouped by the project it belongs to, with per-project totals.
+//
+// Two queries total, never one-per-project. Grouping happens here rather than
+// in SQL because the per-group totals are business rules, not data shape:
+//
+//   `amount_paid` counts ONLY `verified` payments. A payment sitting in
+//   `verification` is money the client has sent but the team hasn't
+//   confirmed; counting it would tell the client they have paid more than
+//   they demonstrably have. A `rejected` one was never valid at all.
+//
+//   `balance_due` comes from the installment schedule, not from subtracting
+//   payments — the schedule is the source of truth for what is owed.
+async function listInvoicesForClient(clientId) {
+  const [payments, balances] = await Promise.all([
+    paymentsRepo.listByClientWithContext(clientId),
+    paymentInstallmentsRepo.outstandingBalanceByClient(clientId),
+  ]);
+
+  const balanceByProject = new Map(balances.map((row) => [row.project_id, row.balance_due]));
+  const groups = new Map();
+
+  for (const payment of payments) {
+    const { project_id: projectId, project_title: projectTitle, ...rest } = payment;
+
+    if (!groups.has(projectId)) {
+      groups.set(projectId, {
+        project_id: projectId,
+        project_title: projectTitle,
+        balance_due: balanceByProject.get(projectId) ?? '0',
+        amount_paid: 0,
+        payments: [],
+      });
+    }
+
+    const group = groups.get(projectId);
+    group.payments.push({ ...rest, project_id: projectId });
+    if (payment.status === 'verified') {
+      group.amount_paid += Number(payment.amount);
+    }
+  }
+
+  // `payments` is already ordered newest-first, so insertion order puts the
+  // most recently active project first — the one the client most likely wants.
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    amount_paid: group.amount_paid.toFixed(2),
+    balance_due: String(group.balance_due),
+  }));
+}
+
 module.exports = {
   createPayment,
   listPaymentsForClientProject,
+  listInvoicesForClient,
   listPaymentsAdmin,
   verifyPayment,
   rejectPayment,

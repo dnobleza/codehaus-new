@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatPHP, toNumber } from '@/shared/utils/currency';
-import type { Payment, PaymentInstallment } from '@/shared/types/payment.types';
+import { formatPHP } from '@/shared/utils/currency';
+import type { PaymentListItem, ProjectInvoice } from '@/shared/types/payment.types';
 import codehausLogo from '@/assets/codehaus-logo.svg';
 import {
   getInstallmentLabel,
@@ -11,11 +11,7 @@ import {
 } from '../utils/paymentPresentation';
 
 interface PaymentHistoryReceiptProps {
-  /** Newest first, as the API returns them (`ORDER BY created_at DESC`). */
-  payments: Payment[] | undefined;
-  installments: PaymentInstallment[] | undefined;
-  /** Shown in the receipt header when the project has an accepted quotation. */
-  quotationNumber?: string;
+  invoice: ProjectInvoice;
 }
 
 /**
@@ -33,61 +29,40 @@ function formatPaymentDate(value: string): string {
   });
 }
 
+/** `null` when the payment predates the installment schedule (nullable FK). */
+function installmentLabelFor(payment: PaymentListItem): string | null {
+  return payment.installment_sequence === null
+    ? null
+    : getInstallmentLabel(payment.installment_sequence);
+}
+
 /**
- * Proof-of-payment receipt: a record of money the client has actually sent,
- * one row per submitted payment.
+ * Proof-of-payment receipt for a single project: a record of money the client
+ * has actually sent, one row per submitted payment, with amount paid and
+ * balance due.
  *
  * Deliberately distinct from `PaymentReceiptCard`, which summarizes an
- * accepted quotation — the cost breakdown and the full installment schedule.
- * That card answers "what will I owe"; this one answers "what have I paid,
- * and what's left". They live in different places for that reason: the
- * quotation breakdown in the Quotations section, this in the project's
- * Invoices tab alongside the payment form.
+ * accepted quotation — the cost breakdown and full installment schedule. That
+ * card answers "what will I owe"; this one answers "what have I paid, and
+ * what's left". The two live in different sections for that reason: the
+ * quotation breakdown under Quotations, this under Invoices.
  *
- * Renders nothing until at least one payment exists.
+ * Both totals are computed server-side (`payments.service.js`), not here —
+ * `amount_paid` counts only verified payments, and `balance_due` comes from
+ * the installment schedule rather than from subtracting payments.
  */
-export function PaymentHistoryReceipt({
-  payments,
-  installments,
-  quotationNumber,
-}: PaymentHistoryReceiptProps) {
-  if (!payments || payments.length === 0) return null;
-
-  const installmentBySequence = new Map(
-    (installments ?? []).map((installment) => [installment.id, installment.sequence]),
-  );
-
-  /**
-   * Only `verified` payments count. A payment sitting in `verification` is
-   * money the client has sent but the team hasn't confirmed — showing it as
-   * paid would overstate progress, and a `rejected` one was never valid.
-   */
-  const amountPaid = payments
-    .filter((payment) => payment.status === 'verified')
-    .reduce((sum, payment) => sum + toNumber(payment.amount), 0);
-
-  /** Balance comes from the schedule, not from payments — it's the source of truth for what's owed. */
-  const balanceDue = (installments ?? [])
-    .filter((installment) => installment.status === 'pending')
-    .reduce((sum, installment) => sum + toNumber(installment.amount), 0);
-
-  function installmentLabelFor(payment: Payment): string | null {
-    if (!payment.installment_id) return null;
-    const sequence = installmentBySequence.get(payment.installment_id);
-    return sequence === undefined ? null : getInstallmentLabel(sequence);
-  }
+export function PaymentHistoryReceipt({ invoice }: PaymentHistoryReceiptProps) {
+  if (invoice.payments.length === 0) return null;
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <img src={codehausLogo} alt="CodeHaus" className="h-8 w-auto" />
             <CardTitle>Payment Receipt</CardTitle>
           </div>
-          {quotationNumber && (
-            <span className="text-sm font-medium text-muted-foreground">{quotationNumber}</span>
-          )}
+          <span className="text-sm font-medium text-muted-foreground">{invoice.project_title}</span>
         </div>
       </CardHeader>
 
@@ -95,7 +70,7 @@ export function PaymentHistoryReceipt({
         {/* Desktop/tablet: table (design-system.md §2.4). */}
         <div className="hidden overflow-x-auto sm:block">
           <table className="w-full border-collapse text-sm">
-            <caption className="sr-only">Payments submitted for this project</caption>
+            <caption className="sr-only">Payments submitted for {invoice.project_title}</caption>
             <thead>
               <tr className="h-10 border-b border-border text-left">
                 <th scope="col" className="px-2 text-xs font-semibold text-muted-foreground">
@@ -119,7 +94,7 @@ export function PaymentHistoryReceipt({
               </tr>
             </thead>
             <tbody>
-              {payments.map((payment) => (
+              {invoice.payments.map((payment) => (
                 <tr key={payment.id} className="h-11 border-b border-border last:border-0">
                   <td className="px-2 text-foreground">{formatPaymentDate(payment.created_at)}</td>
                   <td className="px-2 font-medium text-foreground">
@@ -143,7 +118,7 @@ export function PaymentHistoryReceipt({
 
         {/* Mobile: stacked card-per-row (design-system.md §4 table responsive rule). */}
         <ul className="flex flex-col gap-2 sm:hidden">
-          {payments.map((payment) => (
+          {invoice.payments.map((payment) => (
             <li key={payment.id} className="rounded-lg border border-border p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium text-foreground">
@@ -178,12 +153,13 @@ export function PaymentHistoryReceipt({
 
       <CardFooter className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="text-muted-foreground">
-          Amount paid <span className="font-semibold text-foreground">{formatPHP(amountPaid)}</span>
+          Amount paid{' '}
+          <span className="font-semibold text-foreground">{formatPHP(invoice.amount_paid)}</span>
         </span>
-        {balanceDue > 0 && (
+        {Number(invoice.balance_due) > 0 && (
           <span className="text-muted-foreground">
             Balance due{' '}
-            <span className="font-semibold text-foreground">{formatPHP(balanceDue)}</span>
+            <span className="font-semibold text-foreground">{formatPHP(invoice.balance_due)}</span>
           </span>
         )}
       </CardFooter>

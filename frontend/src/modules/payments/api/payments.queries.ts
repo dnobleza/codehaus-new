@@ -18,7 +18,17 @@ export function useSubmitPayment(projectId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.listByProject(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      // The Invoices page lists this payment too, so it must not go stale.
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.mine() });
     },
+  });
+}
+
+/** Client's payments across every project, grouped by project — backs the Invoices page. */
+export function useMyInvoices() {
+  return useQuery({
+    queryKey: queryKeys.payments.mine(),
+    queryFn: () => paymentsApi.listMine(),
   });
 }
 

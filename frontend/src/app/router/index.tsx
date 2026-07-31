@@ -68,6 +68,10 @@ export const router = createBrowserRouter([
                 path: 'quotations/:projectId/:quotationId',
                 lazy: lazyPage(() => import('@/modules/quotations/pages/QuotationDetailPage')),
               },
+              {
+                path: 'invoices',
+                lazy: lazyPage(() => import('@/modules/payments/pages/InvoicesPage')),
+              },
             ],
           },
         ],

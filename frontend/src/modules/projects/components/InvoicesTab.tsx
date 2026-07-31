@@ -10,7 +10,6 @@ import { useProject } from '../api/projects.queries';
 import { ProjectStatusStepper } from './ProjectStatusStepper';
 import { useProjectPayments } from '@/modules/payments/api/payments.queries';
 import { PaymentForm } from '@/modules/payments/components/PaymentForm';
-import { PaymentHistoryReceipt } from '@/modules/payments/components/PaymentHistoryReceipt';
 
 interface InvoicesTabProps {
   projectId: string;
@@ -20,12 +19,17 @@ interface InvoicesTabProps {
  * Invoices tab: the project's proof-of-payment flow — status stepper,
  * payment-status alerts, and the payment method + proof-of-payment form.
  *
- * Reviewing a quotation (the itemized cost breakdown, the payment schedule,
- * the receipt, and the accept/request-changes decision) deliberately does
- * NOT live here — it lives in the client's Quotations section
- * (`modules/quotations/pages/QuotationDetailPage`), so the client sees the
- * full cost and payment commitment in one place before accepting. A `sent`
- * quotation links out to it from here rather than duplicating the surface.
+ * Two surfaces deliberately do NOT live here, and this tab links out to both
+ * rather than duplicating them:
+ *
+ * - Quotation review (itemized cost breakdown, payment schedule, and the
+ *   accept/request-changes decision) lives in the Quotations section
+ *   (`modules/quotations/pages/QuotationDetailPage`), so the client sees the
+ *   full cost and payment commitment in one place before accepting.
+ * - Payment receipts live in the Invoices section
+ *   (`modules/payments/pages/InvoicesPage`), which covers every project at
+ *   once rather than making the client open each project to see what they
+ *   have paid.
  *
  * Self-contained (fetches its own data via `projectId`) so Base UI's Tabs
  * only mounts it — and only fires its queries — once the client actually
@@ -180,18 +184,19 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
         </Card>
       )}
 
-      {/*
-        Proof-of-payment record: what the client has actually paid, and what's
-        left. Distinct from the quotation's cost breakdown, which lives in the
-        Quotations section — see `PaymentHistoryReceipt`'s doc comment.
-      */}
-      <PaymentHistoryReceipt
-        payments={payments}
-        installments={project.paymentInstallments}
-        quotationNumber={
-          latestQuotation?.status === 'accepted' ? latestQuotation.quotation_number : undefined
-        }
-      />
+      {latestPayment && (
+        <div className="flex flex-col items-start gap-3">
+          <Alert
+            className="w-full"
+            variant="info"
+            title="Your receipts are in the Invoices section"
+            description="Every payment you've made, with what's verified and what's still outstanding."
+          />
+          <Link to="/client/dashboard/invoices" className={buttonVariants({ size: 'sm' })}>
+            View payment receipts
+          </Link>
+        </div>
+      )}
 
       {project.status_code === 'accepted' && !latestPayment && isFullyPaid && (
         <div className="flex flex-col items-center gap-2 py-8 text-center">

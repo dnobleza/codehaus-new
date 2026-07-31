@@ -57,4 +57,48 @@ async function setStatus(id, { status, verifiedBy, verifiedAt }, db = pool) {
   return rows[0] || null;
 }
 
-module.exports = { insert, findById, findByIdForProject, listByProject, listAll, setStatus };
+// Every payment across the caller's own projects, newest first, joined to the
+// context the client Invoices page needs: the project's title and the sequence
+// of the installment the payment settled. Ownership is enforced by the join
+// predicate (pr.client_id = $1), not by filtering after the fact.
+//
+// The installment join is a LEFT JOIN on purpose: `payments.installment_id` is
+// nullable, so a payment that predates the installment schedule still appears
+// in the list (with a null sequence) rather than vanishing from the client's
+// own payment history.
+//
+// Deliberately does NOT go through `paymentPresenter` — this list omits
+// `proof_of_payment_url` entirely rather than presenting it, since the
+// Invoices page never renders proof images and the column carries financial
+// PII (see paymentPresenter.js's comment).
+async function listByClientWithContext(clientId, db = pool) {
+  const { rows } = await db.query(
+    `SELECT p.id,
+            p.project_id,
+            pr.title AS project_title,
+            p.payment_method,
+            p.amount,
+            p.reference_number,
+            p.status,
+            p.created_at,
+            p.verified_at,
+            pi.sequence AS installment_sequence
+     FROM payments p
+     JOIN projects pr ON pr.id = p.project_id
+     LEFT JOIN payment_installments pi ON pi.id = p.installment_id
+     WHERE pr.client_id = $1
+     ORDER BY p.created_at DESC`,
+    [clientId]
+  );
+  return rows;
+}
+
+module.exports = {
+  insert,
+  findById,
+  findByIdForProject,
+  listByProject,
+  listByClientWithContext,
+  listAll,
+  setStatus,
+};
