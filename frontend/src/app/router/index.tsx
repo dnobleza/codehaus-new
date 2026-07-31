@@ -72,6 +72,10 @@ export const router = createBrowserRouter([
                 path: 'invoices',
                 lazy: lazyPage(() => import('@/modules/payments/pages/InvoicesPage')),
               },
+              {
+                path: 'payments',
+                lazy: lazyPage(() => import('@/modules/payments/pages/PaymentsPage')),
+              },
             ],
           },
         ],

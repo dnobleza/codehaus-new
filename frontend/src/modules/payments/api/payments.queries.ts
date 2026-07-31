@@ -20,6 +20,9 @@ export function useSubmitPayment(projectId: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       // The Invoices page lists this payment too, so it must not go stale.
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.mine() });
+      // And the Payments page must re-check what's still owed — this
+      // submission moves the project into `awaiting_verification`.
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.due() });
     },
   });
 }
@@ -29,6 +32,21 @@ export function useMyInvoices() {
   return useQuery({
     queryKey: queryKeys.payments.mine(),
     queryFn: () => paymentsApi.listMine(),
+  });
+}
+
+/**
+ * What the client currently owes, one entry per project — backs the Payments
+ * page. Polls on the same 8s rhythm the project detail uses, so an entry
+ * blocked on `awaiting_verification` unblocks on its own once the team
+ * verifies, without the client reloading.
+ */
+export function useDuePayments() {
+  return useQuery({
+    queryKey: queryKeys.payments.due(),
+    queryFn: () => paymentsApi.listDue(),
+    refetchInterval: (query) =>
+      query.state.data?.some((due) => due.awaiting_verification) ? 8000 : false,
   });
 }
 

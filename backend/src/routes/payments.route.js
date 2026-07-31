@@ -14,5 +14,6 @@ const { requireRole } = require('../middleware/requireRole.middleware');
 router.use(verifyAccessToken);
 
 router.get('/', requireRole('client'), paymentsController.listMine);
+router.get('/due', requireRole('client'), paymentsController.listDue);
 
 module.exports = router;

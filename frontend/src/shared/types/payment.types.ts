@@ -72,6 +72,24 @@ export interface ProjectInvoice {
 export type PaymentInstallmentStatus = 'pending' | 'paid';
 
 /**
+ * One outstanding payment from `GET /payments/due` — the next installment owed
+ * on a project, with the project it belongs to. The client's Payments page
+ * renders one payment form per entry.
+ */
+export interface DuePayment {
+  project_id: string;
+  project_title: string;
+  /**
+   * `true` when a previous submission on this project is still being checked
+   * by the team. The client must not submit again until it clears — resolved
+   * server-side so the rule has one source of truth.
+   */
+  awaiting_verification: boolean;
+  /** The exact installment a submission would settle. */
+  installment: PaymentInstallment;
+}
+
+/**
  * Matches the raw `payment_installments` row shape from
  * `backend/src/repositories/paymentInstallments.repository.js` (a bare
  * `SELECT * ... ORDER BY sequence ASC`, no presenter).

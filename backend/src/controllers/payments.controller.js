@@ -57,6 +57,19 @@ exports.listMine = async (req, res, next) => {
   }
 };
 
+// What the client currently owes, one entry per project, each with the exact
+// installment a submission would settle (GET /payments/due). clientId always
+// comes from the verified JWT subject.
+exports.listDue = async (req, res, next) => {
+  try {
+    const due = await paymentsService.listDuePaymentsForClient(req.user.id);
+    logger.info(`${TAG} Listed ${due.length} due payments for client ${req.user.id}`);
+    res.status(200).json({ success: true, message: 'Due payments retrieved successfully', data: due });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
 // Authenticated proof-of-payment file stream. Authorization (owner client
 // OR ADMIN/STAFF) and the not-found-vs-unauthorized 404 collapsing both
 // happen in the service layer -- see payments.service.js's

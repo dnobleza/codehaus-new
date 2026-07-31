@@ -29,7 +29,7 @@ export const CLIENT_NAV_ITEMS: DashboardNavItem[] = [
   { label: 'Projects', icon: FolderKanban, path: '/client/dashboard/projects' },
   { label: 'Quotations', icon: FileText, path: '/client/dashboard/quotations' },
   { label: 'Invoices', icon: Receipt, path: '/client/dashboard/invoices' },
-  { label: 'Payments', icon: CreditCard, disabled: true },
+  { label: 'Payments', icon: CreditCard, path: '/client/dashboard/payments' },
   { label: 'Messages', icon: MessageSquare, disabled: true },
   { label: 'Notifications', icon: Bell, disabled: true },
   { label: 'Settings', icon: Settings, disabled: true },

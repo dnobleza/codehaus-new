@@ -1,6 +1,7 @@
 import { apiClient } from '@/shared/api/apiClient';
 import type { ApiEnvelope } from '@/shared/types/api.types';
 import type {
+  DuePayment,
   Payment,
   PaymentMethod,
   PaymentStatus,
@@ -45,6 +46,15 @@ export const paymentsApi = {
    */
   async listMine(): Promise<ProjectInvoice[]> {
     const response = await apiClient.get<ApiEnvelope<ProjectInvoice[]>>('/payments');
+    return response.data.data;
+  },
+
+  /**
+   * Everything the caller currently owes, one entry per project, each with the
+   * installment a submission would settle — backs the client Payments page.
+   */
+  async listDue(): Promise<DuePayment[]> {
+    const response = await apiClient.get<ApiEnvelope<DuePayment[]>>('/payments/due');
     return response.data.data;
   },
 

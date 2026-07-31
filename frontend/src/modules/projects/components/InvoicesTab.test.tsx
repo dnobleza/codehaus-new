@@ -110,6 +110,31 @@ describe('InvoicesTab', () => {
     );
   });
 
+  it('never renders the payment form — that moved to the Payments section', () => {
+    renderTab({
+      quotations: [{ ...quotation, status: 'accepted' }],
+      paymentInstallments: [
+        {
+          id: 'i-1',
+          project_id: 'proj-1',
+          quotation_id: 'q-1',
+          sequence: 1,
+          percentage: '50.00',
+          amount: '25000.00',
+          due_date: '2026-07-01',
+          status: 'pending',
+          created_at: '2026-07-01',
+        },
+      ],
+    });
+
+    expect(screen.queryByText('Select a payment method')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /go to payments/i })).toHaveAttribute(
+      'href',
+      '/client/dashboard/payments',
+    );
+  });
+
   it('links a sent quotation out to the quotations section', () => {
     renderTab();
 

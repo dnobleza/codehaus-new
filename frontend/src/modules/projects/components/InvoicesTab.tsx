@@ -2,14 +2,13 @@ import { Link } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
 import { formatPHP } from '@/shared/utils/currency';
 import { useProject } from '../api/projects.queries';
 import { ProjectStatusStepper } from './ProjectStatusStepper';
 import { useProjectPayments } from '@/modules/payments/api/payments.queries';
-import { PaymentForm } from '@/modules/payments/components/PaymentForm';
 
 interface InvoicesTabProps {
   projectId: string;
@@ -55,9 +54,6 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
   const latestQuotation = project.quotations?.[0];
 
   const latestPayment = payments?.[0];
-  // Sequence-ordered by the API, so `.find` naturally returns the
-  // lowest-sequence pending row — the same installment the server resolves
-  // "the next pending installment" to when validating a payment submission.
   const nextPendingInstallment = project.paymentInstallments?.find(
     (installment) => installment.status === 'pending',
   );
@@ -65,10 +61,11 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
   const remainingInstallmentCount =
     project.paymentInstallments?.filter((installment) => installment.status === 'pending').length ??
     0;
-  const canSubmitPayment =
-    latestQuotation?.status === 'accepted' &&
-    Boolean(nextPendingInstallment) &&
-    (!latestPayment || latestPayment.status !== 'verification');
+  // Submitting happens in the Payments section now; this tab only says whether
+  // something is owed and points there. The rule for whether a submission is
+  // actually allowed (accepted quotation, pending installment, nothing already
+  // under verification) lives server-side in `GET /payments/due`.
+  const hasAmountDue = latestQuotation?.status === 'accepted' && Boolean(nextPendingInstallment);
 
   return (
     <div className="flex flex-col gap-6">
@@ -157,31 +154,30 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
           <Alert
             variant="info"
             title="Downpayment received"
-            description={`${remainingInstallmentCount} installment${remainingInstallmentCount === 1 ? '' : 's'} remaining. You can submit your next payment below.`}
+            description={`${remainingInstallmentCount} installment${remainingInstallmentCount === 1 ? '' : 's'} remaining.`}
           />
         ) : null)}
 
-      {canSubmitPayment && nextPendingInstallment && (
-        <Card className="mx-auto w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Select a payment method</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {latestPayment?.status === 'rejected' && (
-              <Alert
-                className="mb-4"
-                variant="danger"
-                title="Your previous payment wasn't verified"
-                description="Please double-check your details and resubmit proof of payment."
-              />
-            )}
-            <PaymentForm
-              key={nextPendingInstallment.id}
-              projectId={project.id}
-              installment={nextPendingInstallment}
-            />
-          </CardContent>
-        </Card>
+      {latestPayment?.status === 'rejected' && (
+        <Alert
+          variant="danger"
+          title="Your previous payment wasn't verified"
+          description="Please double-check your details and resubmit proof of payment from the Payments section."
+        />
+      )}
+
+      {hasAmountDue && nextPendingInstallment && (
+        <div className="flex flex-col items-start gap-3">
+          <Alert
+            className="w-full"
+            variant="info"
+            title={`${formatPHP(nextPendingInstallment.amount)} due on this project`}
+            description="Submit your payment and upload proof from the Payments section."
+          />
+          <Link to="/client/dashboard/payments" className={buttonVariants({ size: 'sm' })}>
+            Go to Payments
+          </Link>
+        </div>
       )}
 
       {latestPayment && (

@@ -224,10 +224,39 @@ async function listInvoicesForClient(clientId) {
   }));
 }
 
+// Backs the client's Payments page: everything the client currently owes, one
+// entry per project, each carrying the exact installment a submission would be
+// applied to.
+//
+// Reshapes the flat query row into `{ project, awaitingVerification,
+// installment }` so the installment object matches the shape the payment form
+// and the rest of the API already use — the page can hand it straight to the
+// submit endpoint without reassembling fields.
+async function listDuePaymentsForClient(clientId) {
+  const rows = await paymentInstallmentsRepo.listNextDueByClient(clientId);
+
+  return rows.map((row) => {
+    const {
+      project_title_id: projectId,
+      project_title: projectTitle,
+      awaiting_verification: awaitingVerification,
+      ...installment
+    } = row;
+
+    return {
+      project_id: projectId,
+      project_title: projectTitle,
+      awaiting_verification: awaitingVerification,
+      installment,
+    };
+  });
+}
+
 module.exports = {
   createPayment,
   listPaymentsForClientProject,
   listInvoicesForClient,
+  listDuePaymentsForClient,
   listPaymentsAdmin,
   verifyPayment,
   rejectPayment,
