@@ -31,7 +31,13 @@ exports.getById = async (req, res, next) => {
 exports.updateStatus = async (req, res, next) => {
   try {
     const { statusCode } = adminStatusUpdateSchema.parse(req.body);
-    const project = await projectsService.updateProjectStatusAdmin(req.params.id, statusCode);
+    // Role travels to the service because this endpoint serves both delivery
+    // progress and commercial outcomes; only the service can tell them apart.
+    const project = await projectsService.updateProjectStatusAdmin(
+      req.params.id,
+      statusCode,
+      req.user?.role,
+    );
     logger.info(`${TAG} Project ${req.params.id} status updated to ${statusCode}`);
     res.status(200).json({ success: true, message: 'Project status updated successfully', data: project });
   } catch (error) {

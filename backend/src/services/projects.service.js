@@ -6,6 +6,7 @@ const projectStatusesRepo = require('../repositories/projectStatuses.repository'
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
 const projectOverviewService = require('./projectOverview.service');
 const notificationsService = require('./notifications.service');
+const { ROLES, STAFF_ASSIGNABLE_STATUSES } = require('../constants/roles');
 const logger = require('../utils/logger');
 const TAG = '[PROJECTS-SERVICE]';
 
@@ -116,7 +117,20 @@ async function getProjectAdmin(id) {
 // atomic step -- per the stage-2 Project Overview brief, that is the real
 // trigger for the template, not the manual admin ops endpoint. Both writes
 // commit or roll back together.
-async function updateProjectStatusAdmin(id, statusCode) {
+//
+// `actorRole` gates WHICH statuses the caller may set. This endpoint is the one
+// place where delivery progress ("in testing") and commercial outcomes
+// ("completed", "cancelled") share a single route, so route-level gating cannot
+// express the rule on its own -- staff legitimately needs this endpoint, but
+// must not be able to declare a project completed or cancelled. Omitting
+// `actorRole` (internal callers) applies no restriction.
+async function updateProjectStatusAdmin(id, statusCode, actorRole) {
+  const role = actorRole ? String(actorRole).toUpperCase() : null;
+  if (role === ROLES.STAFF && !STAFF_ASSIGNABLE_STATUSES.includes(statusCode)) {
+    logger.info(`${TAG} Staff denied status "${statusCode}" on project ${id}`);
+    throw httpError(403, 'You do not have permission to set this project status');
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
