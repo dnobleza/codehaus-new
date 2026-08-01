@@ -101,7 +101,17 @@ async function listPaymentsForClientProject(projectId, clientId) {
   return paymentsRepo.listByProject(projectId);
 }
 
-async function listPaymentsAdmin(filters) {
+// `actorRole`/`actorUserId` scope this the same way projects.service.js's
+// listProjectsAdmin does: STAFF only sees payments on projects they're
+// formally assigned to (project_assignments), ADMIN keeps seeing everything.
+// Route-level gating can't express this one -- there is no :id on the list
+// route -- so the role travels to the repository, the only layer that knows
+// how to filter by assignment.
+async function listPaymentsAdmin(filters, actorRole, actorUserId) {
+  const role = actorRole ? String(actorRole).toUpperCase() : null;
+  if (role === ROLES.STAFF) {
+    return paymentsRepo.listAssignedTo(actorUserId, filters);
+  }
   return paymentsRepo.listAll(filters);
 }
 

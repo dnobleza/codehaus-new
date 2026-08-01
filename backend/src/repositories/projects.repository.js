@@ -44,6 +44,29 @@ async function listAll({ statusCode } = {}, db = pool) {
   return rows;
 }
 
+// Staff-scoped counterpart to listAll: same filter support and ordering,
+// restricted to projects the caller is formally named on via
+// project_assignments (see 010_create_project_assignments.sql --
+// idx_project_assignments_user_id exists for exactly this predicate).
+// Used by projects.service.js#listProjectsAdmin when the caller is STAFF;
+// ADMIN keeps seeing everything via listAll.
+async function listAssignedTo(userId, { statusCode } = {}, db = pool) {
+  const values = [userId];
+  let where = 'pa.user_id = $1';
+  if (statusCode) {
+    values.push(statusCode);
+    where += ` AND p.status_code = $${values.length}`;
+  }
+  const { rows } = await db.query(
+    `SELECT p.* FROM projects p
+     JOIN project_assignments pa ON pa.project_id = p.id
+     WHERE ${where}
+     ORDER BY p.created_at DESC`,
+    values
+  );
+  return rows;
+}
+
 async function updateStatus(id, statusCode, db = pool) {
   const { rows } = await db.query('UPDATE projects SET status_code = $1 WHERE id = $2 RETURNING *', [
     statusCode,
@@ -62,4 +85,13 @@ async function decline(id, reason, db = pool) {
   return rows[0] || null;
 }
 
-module.exports = { create, findById, findByIdForClient, listByClient, listAll, updateStatus, decline };
+module.exports = {
+  create,
+  findById,
+  findByIdForClient,
+  listByClient,
+  listAll,
+  listAssignedTo,
+  updateStatus,
+  decline,
+};

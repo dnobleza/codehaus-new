@@ -49,6 +49,30 @@ async function listAll({ status } = {}, db = pool) {
   return rows;
 }
 
+// Same shape and filter support as `listAll`, narrowed to payments on projects
+// the given user is formally assigned to (project_assignments). Backs the
+// staff view of the payments queue: staff owns delivery execution, so they can
+// see whether their own projects are paid up, but never every client's money.
+//
+// The join predicate does the scoping, so an unassigned project's payments are
+// unreachable rather than filtered out after the fact.
+async function listAssignedTo(userId, { status } = {}, db = pool) {
+  const values = [userId];
+  let where = 'pa.user_id = $1';
+  if (status) {
+    values.push(status);
+    where += ` AND p.status = $${values.length}`;
+  }
+  const { rows } = await db.query(
+    `SELECT p.* FROM payments p
+     JOIN project_assignments pa ON pa.project_id = p.project_id
+     WHERE ${where}
+     ORDER BY p.created_at DESC`,
+    values
+  );
+  return rows;
+}
+
 async function setStatus(id, { status, verifiedBy, verifiedAt }, db = pool) {
   const { rows } = await db.query(
     `UPDATE payments SET status = $1, verified_by = $2, verified_at = $3 WHERE id = $4 RETURNING *`,
@@ -100,5 +124,6 @@ module.exports = {
   listByProject,
   listByClientWithContext,
   listAll,
+  listAssignedTo,
   setStatus,
 };

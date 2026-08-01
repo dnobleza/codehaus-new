@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const projectsRepo = require('../repositories/projects.repository');
+const projectAssignmentsRepo = require('../repositories/projectAssignments.repository');
 const packagesRepo = require('../repositories/packages.repository');
 const quotationsRepo = require('../repositories/quotations.repository');
 const projectStatusesRepo = require('../repositories/projectStatuses.repository');
@@ -83,7 +84,18 @@ async function getProjectForClient(id, clientId) {
   return { ...project, quotations, paymentInstallments };
 }
 
-async function listProjectsAdmin(filters) {
+// `actorRole`/`actorUserId` scope the LIST endpoint the same way `actorRole`
+// scopes updateProjectStatusAdmin below: STAFF only sees projects they are
+// formally assigned to (project_assignments), ADMIN keeps seeing everything.
+// Route-level gating (requireAssignedOrAdmin) can't express this one --
+// there is no :id on the list route -- so the role has to travel all the way
+// through to the repository, which is the only layer that knows how to
+// filter by assignment.
+async function listProjectsAdmin(filters, actorRole, actorUserId) {
+  const role = actorRole ? String(actorRole).toUpperCase() : null;
+  if (role === ROLES.STAFF) {
+    return projectsRepo.listAssignedTo(actorUserId, filters);
+  }
   return projectsRepo.listAll(filters);
 }
 
@@ -252,6 +264,55 @@ async function markProjectDeliveredAdmin(id) {
   return updated;
 }
 
+// Assignment management (admin-only, see adminProjects.route.js). Inert
+// without these: 1.3's read-scoping has no way to actually put a staff
+// member on a team otherwise. All three re-check the project exists first
+// so a bad :id 404s here rather than surfacing as an opaque FK failure.
+async function assignUserToProject(projectId, userId, assignedByUserId) {
+  const project = await projectsRepo.findById(projectId);
+  if (!project) throw httpError(404, 'Project not found');
+
+  try {
+    const assignment = await projectAssignmentsRepo.assign({
+      projectId,
+      userId,
+      assignedBy: assignedByUserId,
+    });
+    logger.info(`${TAG} User ${userId} assigned to project ${projectId} by ${assignedByUserId}`);
+    return assignment;
+  } catch (error) {
+    // 23505: project_assignments' PK is (project_id, user_id) -- this user
+    // is already on this project's team.
+    if (error.code === '23505') throw httpError(409, 'This user is already assigned to this project');
+    // 23503: user_id has no matching row in users. There is no users
+    // repository in this codebase to pre-check existence against (see task
+    // notes: the users table itself has no creating migration), so the FK
+    // violation IS the existence check.
+    if (error.code === '23503') throw httpError(404, 'User not found');
+    throw error;
+  }
+}
+
+async function unassignUserFromProject(projectId, userId) {
+  const project = await projectsRepo.findById(projectId);
+  if (!project) throw httpError(404, 'Project not found');
+
+  const removed = await projectAssignmentsRepo.unassign(projectId, userId);
+  if (!removed) throw httpError(404, 'This user is not assigned to this project');
+
+  logger.info(`${TAG} User ${userId} unassigned from project ${projectId}`);
+  return removed;
+}
+
+// Reachable by admin unconditionally and by staff only if requireAssignedOrAdmin
+// already let them through (adminProjects.route.js) -- no further role check
+// needed here.
+async function listProjectAssignments(projectId) {
+  const project = await projectsRepo.findById(projectId);
+  if (!project) throw httpError(404, 'Project not found');
+  return projectAssignmentsRepo.listByProject(projectId);
+}
+
 module.exports = {
   createProject,
   listProjectsForClient,
@@ -262,4 +323,7 @@ module.exports = {
   acceptProjectAdmin,
   declineProjectAdmin,
   markProjectDeliveredAdmin,
+  assignUserToProject,
+  unassignUserFromProject,
+  listProjectAssignments,
 };

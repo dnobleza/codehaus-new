@@ -4,6 +4,7 @@ const router = express.Router();
 const adminProjectsController = require('../controllers/adminProjects.controller');
 const { verifyAccessToken } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/requireRole.middleware');
+const { requireAssignedOrAdmin } = require('../middleware/requireAssignedOrAdmin.middleware');
 const { ROLES } = require('../constants/roles');
 
 /*
@@ -30,16 +31,30 @@ const requireAdmin = requireRole(ROLES.ADMIN);
 const requireDeliveryAccess = requireRole(ROLES.ADMIN, ROLES.STAFF);
 
 // --- Read: delivery work is visible to staff --------------------------------
+// The list has no :id for requireAssignedOrAdmin to gate -- STAFF is scoped
+// to their assigned projects inside the service/repository layer instead
+// (see projects.service.js#listProjectsAdmin).
 router.get('/', requireDeliveryAccess, adminProjectsController.list);
-router.get('/:id', requireDeliveryAccess, adminProjectsController.getById);
+// A single project DOES have an :id, so this is where requireAssignedOrAdmin
+// applies: staff may only reach a project they are formally assigned to via
+// project_assignments; admin is unrestricted.
+router.get('/:id', requireDeliveryAccess, requireAssignedOrAdmin, adminProjectsController.getById);
 
 /*
   Status transitions are mixed: this one endpoint expresses both delivery
   progress and commercial outcomes. Staff reaches it, but the service applies
   STAFF_ASSIGNABLE_STATUSES so a staff caller can only set delivery states.
   Route gating alone would let staff mark a project `completed` or `cancelled`.
+  requireAssignedOrAdmin additionally confines staff to their own assigned
+  projects -- otherwise any staff member could report delivery progress on
+  a project they have nothing to do with.
 */
-router.patch('/:id/status', requireDeliveryAccess, adminProjectsController.updateStatus);
+router.patch(
+  '/:id/status',
+  requireDeliveryAccess,
+  requireAssignedOrAdmin,
+  adminProjectsController.updateStatus,
+);
 
 // --- Commercial decisions: admin only ---------------------------------------
 // Accepting or declining a request is taking on (or refusing) new business.
@@ -62,15 +77,36 @@ router.patch(
 );
 
 // --- Delivery execution: staff's own surface --------------------------------
+// requireAssignedOrAdmin confines staff to the projects they're assigned to;
+// admin remains unrestricted.
 router.patch(
   '/:id/milestones/:milestoneId',
   requireDeliveryAccess,
+  requireAssignedOrAdmin,
   adminProjectsController.updateMilestoneProgress,
 );
 router.post(
   '/:id/milestones/generate',
   requireDeliveryAccess,
+  requireAssignedOrAdmin,
   adminProjectsController.generateMilestones,
+);
+
+/*
+  Assignment management: putting a staff member on (or off) a project's team
+  is itself a commercial/resourcing decision, not delivery execution, so it
+  is admin-only -- same principle as accept/decline/quotations above. Reading
+  the roster is safe to extend to staff (they already see everything else
+  about a project they're assigned to), gated the same way as the other
+  staff-reachable per-project routes.
+*/
+router.post('/:id/assignments', requireAdmin, adminProjectsController.assignUser);
+router.delete('/:id/assignments/:userId', requireAdmin, adminProjectsController.unassignUser);
+router.get(
+  '/:id/assignments',
+  requireDeliveryAccess,
+  requireAssignedOrAdmin,
+  adminProjectsController.listAssignments,
 );
 
 module.exports = router;

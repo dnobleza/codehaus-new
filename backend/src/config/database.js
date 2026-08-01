@@ -1,5 +1,6 @@
 const { Pool, types } = require('pg');
 const logger = require('../utils/logger');
+const config = require('./env');
 const TAG = '[DATABASE]';
 
 // DATE columns (oid 1082) default to parsing into a JS Date at LOCAL
@@ -12,11 +13,11 @@ const TAG = '[DATABASE]';
 types.setTypeParser(1082, (value) => value);
 
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  host: config.db.host,
+  port: config.db.port,
+  database: config.db.name,
+  user: config.db.user,
+  password: config.db.password,
   max: 20,
   idleTimeoutMillis: 3000,
   connectionTimeoutMillis: 5000,

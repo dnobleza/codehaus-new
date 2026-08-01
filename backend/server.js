@@ -3,8 +3,9 @@ require('dotenv').config();
 const app = require('./app');
 const logger = require('./src/utils/logger.js');
 const pool = require('./src/config/database');
+const config = require('./src/config/env');
 
-const PORT = process.env.PORT || 3000;
+const PORT = config.port;
 const TAG = '[SERVER]';
 
 async function startserver() {

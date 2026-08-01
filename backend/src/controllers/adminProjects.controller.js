@@ -3,6 +3,7 @@ const { toHttpError } = require('../utils/httpError');
 const { adminStatusUpdateSchema, adminDeclineSchema } = require('../validators/projects.validator');
 const { adminQuotationSchema } = require('../validators/quotations.validator');
 const { updateMilestoneProgressSchema } = require('../validators/milestones.validator');
+const { assignUserSchema } = require('../validators/projectAssignments.validator');
 const projectsService = require('../services/projects.service');
 const quotationsService = require('../services/quotations.service');
 const projectOverviewService = require('../services/projectOverview.service');
@@ -10,7 +11,14 @@ const TAG = '[ADMIN-PROJECTS-CONTROLLER]';
 
 exports.list = async (req, res, next) => {
   try {
-    const projects = await projectsService.listProjectsAdmin({ statusCode: req.query.status_code });
+    // Role travels to the service because there is no :id on this route for
+    // requireAssignedOrAdmin to gate -- only the service/repository layer can
+    // scope "which projects" by role. See projects.service.js#listProjectsAdmin.
+    const projects = await projectsService.listProjectsAdmin(
+      { statusCode: req.query.status_code },
+      req.user?.role,
+      req.user?.id
+    );
     logger.info(`${TAG} Listed ${projects.length} projects (admin)`);
     res.status(200).json({ success: true, message: 'Projects retrieved successfully', data: projects });
   } catch (error) {
@@ -143,6 +151,40 @@ exports.sendDraftQuotation = async (req, res, next) => {
     });
     logger.info(`${TAG} Draft quotation ${req.params.quotationId} sent for project ${req.params.id}`);
     res.status(200).json({ success: true, message: 'Quotation sent to client', data: quotation });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
+exports.assignUser = async (req, res, next) => {
+  try {
+    const { userId } = assignUserSchema.parse(req.body);
+    const assignment = await projectsService.assignUserToProject(req.params.id, userId, req.user?.id);
+    logger.info(`${TAG} User ${userId} assigned to project ${req.params.id} by ${req.user?.id}`);
+    res.status(201).json({ success: true, message: 'User assigned to project', data: assignment });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
+exports.unassignUser = async (req, res, next) => {
+  try {
+    const { userId } = assignUserSchema.parse({ userId: req.params.userId });
+    await projectsService.unassignUserFromProject(req.params.id, userId);
+    logger.info(`${TAG} User ${userId} unassigned from project ${req.params.id}`);
+    res.status(200).json({ success: true, message: 'User unassigned from project', data: null });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
+exports.listAssignments = async (req, res, next) => {
+  try {
+    const assignments = await projectsService.listProjectAssignments(req.params.id);
+    logger.info(`${TAG} Listed ${assignments.length} assignments for project ${req.params.id}`);
+    res
+      .status(200)
+      .json({ success: true, message: 'Project assignments retrieved successfully', data: assignments });
   } catch (error) {
     next(toHttpError(error));
   }

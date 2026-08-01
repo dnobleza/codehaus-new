@@ -15,6 +15,7 @@ import { DataTable } from '@/shared/components/feature/DataTable';
 import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
 import { formatPHP } from '@/shared/utils/currency';
+import { useCan } from '@/shared/auth/useCan';
 import type { ApiError } from '@/shared/api/apiClient';
 import type { Payment, PaymentStatus } from '@/shared/types/payment.types';
 import { PaymentProofPreview } from '../components/PaymentProofPreview';
@@ -45,6 +46,11 @@ const STATUS_BADGE: Record<PaymentStatus, 'neutral' | 'warning' | 'success' | 'd
  * dashboard context").
  */
 export function AdminPaymentsQueuePage() {
+  const canVerify = useCan('payment.verify');
+  const canReject = useCan('payment.reject');
+  const canViewProof = useCan('payment.viewProof');
+  const canAction = canVerify && canReject;
+
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>('verification');
   const filters = statusFilter === 'all' ? undefined : { status: statusFilter };
 
@@ -163,9 +169,11 @@ export function AdminPaymentsQueuePage() {
                     </Badge>
                   </dd>
                 </dl>
-                <PaymentProofPreview proofUrl={selectedPayment.proof_of_payment_url} />
+                {canViewProof && (
+                  <PaymentProofPreview proofUrl={selectedPayment.proof_of_payment_url} />
+                )}
               </SheetBody>
-              {selectedPayment.status === 'verification' && (
+              {selectedPayment.status === 'verification' && canAction && (
                 <SheetFooter>
                   {actionError && (
                     <p className="mr-auto text-sm text-destructive">{actionError.message}</p>

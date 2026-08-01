@@ -1,4 +1,5 @@
 const logger = require('../utils/logger');
+const config = require('../config/env');
 const TAG = '[HEALTH-CONTROLLER]';
 
 exports.health = (req, res, next) => {
@@ -7,7 +8,7 @@ exports.health = (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Codehaus API is running',
-      env: process.env.NODE_ENV,
+      env: config.nodeEnv,
     });
   } catch (error) {
     next(error);

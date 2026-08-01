@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const logger = require('./src/utils/logger');
+const config = require('./src/config/env');
 const TAG = '[APP]';
 
 const healthRoutes = require('./src/routes/health.route');
@@ -30,7 +31,7 @@ const app = express();
 // this if the app is ever deployed behind more than one reverse-proxy layer.
 app.set('trust proxy', 1);
 
-const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').filter(Boolean);
+const allowedOrigins = config.corsOrigin.split(',').filter(Boolean);
 
 app.use(helmet());
 app.use(

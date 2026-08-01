@@ -1,35 +1,77 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderKanban, LifeBuoy, Receipt } from 'lucide-react';
+import { Clock3, FolderKanban, UserRoundCheck } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { ActivityFeed } from '@/shared/components/feature/ActivityFeed';
 import { DataTable } from '@/shared/components/feature/DataTable';
 import { StatCard } from '@/shared/components/feature/StatCard';
+import { EmptyState } from '@/shared/components/common/EmptyState';
+import { ErrorState } from '@/shared/components/common/ErrorState';
+import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
 import { useAuthStore } from '@/shared/store/auth.store';
-import { PROJECT_STATUS_VARIANT } from '@/shared/utils/statusVariant';
+import type { ProjectStatusCode } from '@/shared/types/project.types';
 import { useAdminProjects } from '@/modules/projects/api/projects.queries';
-import { useAdminPayments } from '@/modules/payments/api/payments.queries';
-import { MOCK_STAFF_ACTIVITY, MOCK_STAFF_PROJECTS } from './mockData';
+import {
+  PROJECT_STATUS_BADGE_VARIANT,
+  PROJECT_STATUS_LABELS,
+} from '@/modules/projects/utils/projectStatus';
+
+// Delivery-stage grouping for the "what's in flight" panel — mirrors the
+// backend's own STAFF_ASSIGNABLE_STATUSES plus the statuses that precede
+// them in the forward progression, since staff can view (though not always
+// set) all of these on an assigned project.
+const IN_PROGRESS_STATUSES: ProjectStatusCode[] = [
+  'accepted',
+  'scheduled',
+  'in_development',
+  'in_testing',
+  'client_review',
+  'revision_requested',
+  'revision_in_progress',
+  'ready_for_deployment',
+  'deployed',
+];
+
+// A project sits here specifically because the CLIENT hasn't moved it
+// forward yet — not because staff or admin owe it anything. This is the
+// "blocked, not on us" bucket staff needs to see at a glance.
+const BLOCKED_ON_CLIENT_STATUSES: ProjectStatusCode[] = ['waiting_for_client', 'quotation_sent'];
 
 /**
- * Staff dashboard home — a reasonable extension of the design doc's
- * dashboard-admin IA (§3.2), scoped to the signed-in staff member's own
- * assigned work rather than the full cross-client view admins see. Static
- * mock data only — no network calls.
+ * Staff dashboard home — real API data only. Answers "what do I need to
+ * move forward today?": assigned projects grouped by delivery stage, and
+ * which of those are blocked waiting on the client rather than on staff.
+ *
+ * `useAdminProjects()` is expected to return only this staff member's
+ * assigned projects once the backend's assignment-scoping for
+ * `GET /admin/projects` ships (concurrent backend work) — no client-side
+ * filtering is applied here to fake that scoping in the meantime.
+ *
+ * OMITTED: a "milestones in progress" panel, per the task brief's ask —
+ * there is no endpoint that exposes milestone data to STAFF/ADMIN today.
+ * `GET /projects/:id/overview` (the only endpoint that returns milestones)
+ * is hard-gated to role CLIENT (`requireRole('client')` in
+ * `backend/src/routes/projects.route.js`), and milestones are not nested on
+ * `GET /admin/projects` or `GET /admin/projects/:id` either (verified
+ * against `projects.service.js#getProjectAdmin`, which only nests
+ * `quotations` and `paymentInstallments`). Surfacing this needs a new
+ * admin/staff-scoped milestones read endpoint.
  */
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
+  const { data: projects, isLoading, isError, refetch } = useAdminProjects();
 
-  // Staff share the same admin/staff-scoped endpoints (task brief: staff
-  // gets the same project queue + payment verification access as admin),
-  // so these two counts are real; "tasks due this week"/tickets stay mock.
-  const { data: projects } = useAdminProjects();
-  const { data: payments } = useAdminPayments({ status: 'verification' });
-
-  const pendingReviewCount = (projects ?? []).filter(
-    (project) => project.status_code === 'submitted' || project.status_code === 'under_review',
-  ).length;
-  const awaitingVerificationCount = payments?.length ?? 0;
+  const inProgressProjects = useMemo(
+    () => (projects ?? []).filter((project) => IN_PROGRESS_STATUSES.includes(project.status_code)),
+    [projects],
+  );
+  const blockedOnClientProjects = useMemo(
+    () =>
+      (projects ?? []).filter((project) =>
+        BLOCKED_ON_CLIENT_STATUSES.includes(project.status_code),
+      ),
+    [projects],
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,54 +80,111 @@ export function DashboardPage() {
           Welcome back{user ? `, ${user.firstName}` : ''}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Here's what's assigned to you this week.
+          What needs to move forward today, across your assigned projects.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link to="/staff/dashboard/projects" className="block">
-          <StatCard
-            label="Projects awaiting review"
-            value={String(pendingReviewCount)}
-            icon={FolderKanban}
-          />
-        </Link>
-        <Link to="/staff/dashboard/payments" className="block">
-          <StatCard
-            label="Awaiting payment verification"
-            value={String(awaitingVerificationCount)}
-            icon={Receipt}
-          />
-        </Link>
-        <StatCard label="Open tickets assigned" value="2" icon={LifeBuoy} />
-      </div>
+      {isLoading && <LoadingSpinner label="Loading your projects..." />}
+      {isError && <ErrorState onRetry={() => refetch()} />}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-8">
-          <h2 className="mb-3 text-lg font-semibold text-foreground">Assigned projects</h2>
-          <DataTable
-            columns={[
-              { header: 'Project', accessor: (row) => row.name },
-              { header: 'Client', accessor: (row) => row.client },
-              {
-                header: 'Status',
-                accessor: (row) => (
-                  <Badge variant={PROJECT_STATUS_VARIANT[row.status] ?? 'neutral'}>
-                    {row.status}
-                  </Badge>
-                ),
-              },
-              { header: 'Due date', accessor: (row) => row.dueDate, className: 'text-right' },
-            ]}
-            rows={MOCK_STAFF_PROJECTS}
-            getRowKey={(row) => row.id}
-          />
-        </div>
-        <div className="lg:col-span-4">
-          <h2 className="mb-3 text-lg font-semibold text-foreground">Recent activity</h2>
-          <ActivityFeed title="Your recent activity" entries={MOCK_STAFF_ACTIVITY} />
-        </div>
-      </div>
+      {!isLoading && !isError && (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Link to="/staff/dashboard/projects" className="block">
+              <StatCard
+                label="Assigned projects in progress"
+                value={String(inProgressProjects.length)}
+                icon={FolderKanban}
+              />
+            </Link>
+            <Link to="/staff/dashboard/projects" className="block">
+              <StatCard
+                label="Blocked waiting on client"
+                value={String(blockedOnClientProjects.length)}
+                icon={Clock3}
+              />
+            </Link>
+          </div>
+
+          <div>
+            <h2 className="mb-3 text-lg font-semibold text-foreground">
+              In progress, by delivery stage
+            </h2>
+            {inProgressProjects.length === 0 ? (
+              <EmptyState
+                icon={UserRoundCheck}
+                title="Nothing in progress"
+                description="Assigned projects actively being delivered will show up here."
+              />
+            ) : (
+              <DataTable
+                columns={[
+                  {
+                    header: 'Project',
+                    accessor: (row) => (
+                      <Link
+                        to={`/staff/dashboard/projects/${row.id}`}
+                        className="font-medium text-foreground hover:text-primary-text hover:underline"
+                      >
+                        {row.title}
+                      </Link>
+                    ),
+                  },
+                  {
+                    header: 'Stage',
+                    accessor: (row) => (
+                      <Badge variant={PROJECT_STATUS_BADGE_VARIANT[row.status_code]}>
+                        {PROJECT_STATUS_LABELS[row.status_code]}
+                      </Badge>
+                    ),
+                  },
+                ]}
+                rows={inProgressProjects}
+                getRowKey={(row) => row.id}
+              />
+            )}
+          </div>
+
+          <div>
+            <h2 className="mb-3 text-lg font-semibold text-foreground">
+              Blocked waiting on client
+            </h2>
+            {blockedOnClientProjects.length === 0 ? (
+              <EmptyState
+                icon={Clock3}
+                title="Nothing blocked"
+                description="Projects waiting on a client response or a quotation reply will show up here."
+              />
+            ) : (
+              <DataTable
+                columns={[
+                  {
+                    header: 'Project',
+                    accessor: (row) => (
+                      <Link
+                        to={`/staff/dashboard/projects/${row.id}`}
+                        className="font-medium text-foreground hover:text-primary-text hover:underline"
+                      >
+                        {row.title}
+                      </Link>
+                    ),
+                  },
+                  {
+                    header: 'Waiting on',
+                    accessor: (row) => (
+                      <Badge variant={PROJECT_STATUS_BADGE_VARIANT[row.status_code]}>
+                        {PROJECT_STATUS_LABELS[row.status_code]}
+                      </Badge>
+                    ),
+                  },
+                ]}
+                rows={blockedOnClientProjects}
+                getRowKey={(row) => row.id}
+              />
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

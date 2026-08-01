@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
+const config = require('../config/env');
 const TAG = '[AUTH-MIDDLEWARE]';
 
 function verifyAccessToken(req, res, next) {
@@ -11,7 +12,7 @@ function verifyAccessToken(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
     req.user = { id: payload.sub, role: payload.role };
     next();
   } catch (error) {
