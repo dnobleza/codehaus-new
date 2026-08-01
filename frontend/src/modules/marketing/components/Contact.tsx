@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
+import { Container } from './Container';
+import { Eyebrow } from './Eyebrow';
 import { ScrollReveal } from './ScrollReveal';
+import { Section } from './Section';
 
 /**
  * The shared `Input` primitive now carries the clay field treatment app-wide
@@ -33,16 +36,14 @@ export function Contact() {
     // `overflow-x-clip`: the decorative `-inset-6` accent below extends 24px
     // past the container on each side, which pushed the document 8px wider
     // than the viewport at 360px and produced a horizontal scrollbar.
-    <section id="contact" className="overflow-x-clip bg-secondary/40 py-24 sm:py-32">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+    <Section id="contact" className="overflow-x-clip bg-secondary/40">
+      <Container className="max-w-3xl">
         <ScrollReveal className="text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
-            Get in touch
-          </span>
+          <Eyebrow className="mb-4">Get in touch</Eyebrow>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Let's talk
           </h2>
-          <p className="mt-4 text-base text-muted-foreground">
+          <p className="mt-4 text-base leading-7 text-muted-foreground">
             Questions about CodeHaus? Send us a message and our team will get back to you within one
             business day.
           </p>
@@ -96,18 +97,14 @@ export function Contact() {
                     )}
                   />
                 </div>
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="clay-surface clay-lift h-12 self-start rounded-full bg-primary px-8 text-base font-semibold text-primary-foreground hover:bg-primary"
-                >
+                <Button type="submit" variant="cta" size="cta" className="self-start">
                   Send message
                 </Button>
               </form>
             )}
           </div>
         </ScrollReveal>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 }

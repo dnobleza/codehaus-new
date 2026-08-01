@@ -1,19 +1,44 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
-import { cn } from '@/lib/utils';
 import codehausLogo from '@/assets/codehaus-logo.svg';
 import { NAV_ITEMS } from '../constants';
+import { Container } from './Container';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEscapeKey(isOpen, () => setIsOpen(false));
+
+  /**
+   * Modal-drawer housekeeping the hand-rolled panel does not get for free:
+   * move focus into the drawer on open so keyboard and screen-reader users
+   * land inside it rather than continuing through the page behind, return
+   * focus to the toggle on close, and stop the page scrolling underneath.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    // Captured now rather than read in the cleanup: by the time cleanup runs
+    // the ref may already point somewhere else.
+    const toggle = toggleRef.current;
+
+    document.body.style.overflow = 'hidden';
+    drawerRef.current?.querySelector<HTMLElement>('a, button')?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      toggle?.focus();
+    };
+  }, [isOpen]);
 
   function handleNavClick() {
     setIsOpen(false);
@@ -25,12 +50,10 @@ export function Navbar() {
     // rounded `--radius-clay` treatment is deliberately NOT applied here — a
     // full-bleed sticky bar reads better with square edges.
     <header className="sticky top-0 z-50 border-b border-glass-border bg-glass-bg shadow-[0_1px_0_0_rgba(100,80,60,0.06)] backdrop-blur-xl backdrop-saturate-150">
-      <nav
-        aria-label="Primary"
-        className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
-      >
+      <Container as="nav" aria-label="Primary" className="flex h-16 items-center justify-between">
         <a href="#home" className="flex items-center">
-          <img src={codehausLogo} alt="CodeHaus" className="h-19 w-auto" />
+          {/* Fits inside the 64px bar with even space above and below. */}
+          <img src={codehausLogo} alt="CodeHaus" className="h-10 w-auto" />
         </a>
 
         <ul className="hidden items-center gap-8 lg:flex">
@@ -53,17 +76,15 @@ export function Navbar() {
           <Button variant="ghost" onClick={() => navigate('/login')}>
             Log in
           </Button>
-          <Button
-            onClick={() => navigate('/register')}
-            // `rounded-full` must be stated here: Button's base `rounded-lg`
-            // is a utility and would otherwise beat `.clay-surface`'s radius.
-            className="clay-surface clay-lift rounded-full bg-primary px-6 py-2 font-semibold text-primary-foreground hover:bg-primary"
-          >
+          {/* Header-scale CTA: the `cta` variant's materials at the default
+              button footprint, so the bar keeps its 64px rhythm. */}
+          <Button variant="cta" className="px-6 py-2" onClick={() => navigate('/register')}>
             Sign up
           </Button>
         </div>
 
         <button
+          ref={toggleRef}
           type="button"
           className="inline-flex size-10 items-center justify-center rounded-md text-foreground lg:hidden"
           aria-label={isOpen ? 'Close menu' : 'Open menu'}
@@ -71,9 +92,13 @@ export function Navbar() {
           aria-controls="mobile-nav-drawer"
           onClick={() => setIsOpen((prev) => !prev)}
         >
-          {isOpen ? <X className="size-6" /> : <Menu className="size-6" />}
+          {isOpen ? (
+            <X className="size-6" aria-hidden="true" />
+          ) : (
+            <Menu className="size-6" aria-hidden="true" />
+          )}
         </button>
-      </nav>
+      </Container>
 
       <AnimatePresence>
         {isOpen && (
@@ -89,9 +114,11 @@ export function Navbar() {
             />
             <motion.div
               id="mobile-nav-drawer"
-              className={cn(
-                'fixed inset-x-0 top-16 z-40 h-[calc(100vh-4rem)] w-full overflow-y-auto bg-glass-bg backdrop-blur-xl backdrop-saturate-150 lg:hidden',
-              )}
+              ref={drawerRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Site menu"
+              className="fixed inset-x-0 top-16 z-40 h-[calc(100vh-4rem)] w-full overflow-y-auto bg-glass-bg backdrop-blur-xl backdrop-saturate-150 lg:hidden"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
@@ -110,10 +137,12 @@ export function Navbar() {
                   </li>
                 ))}
               </ul>
+              {/* Same CTA materials as every other button on the page — a
+                  mobile visitor should not meet a different product. */}
               <div className="flex flex-col gap-3 border-t border-border px-6 py-6">
                 <Button
-                  variant="outline"
-                  size="lg"
+                  variant="cta-outline"
+                  size="cta"
                   onClick={() => {
                     setIsOpen(false);
                     navigate('/login');
@@ -122,7 +151,8 @@ export function Navbar() {
                   Log in
                 </Button>
                 <Button
-                  size="lg"
+                  variant="cta"
+                  size="cta"
                   onClick={() => {
                     setIsOpen(false);
                     navigate('/register');

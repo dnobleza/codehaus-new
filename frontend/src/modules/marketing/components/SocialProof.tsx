@@ -1,7 +1,9 @@
-import { Award, FolderKanban, Users } from 'lucide-react';
+import { Award, Clock, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import { Container } from './Container';
 import { ScrollReveal } from './ScrollReveal';
+import { Section } from './Section';
 import { Testimonials } from './Testimonials';
 
 const CLIENT_LOGOS = [
@@ -19,10 +21,19 @@ interface Stat {
   label: string;
 }
 
+/**
+ * These must not restate a metric the About section already claims — the two
+ * bands used to disagree on the page ("50+ projects delivered" here against
+ * "3,200+ projects delivered" in `About.tsx`). About owns the volume figures;
+ * this band covers satisfaction, tenure, and responsiveness instead.
+ *
+ * The response-time figure restates the commitment the Contact section already
+ * makes ("within one business day") rather than introducing a new claim.
+ */
 const STATS: Stat[] = [
-  { icon: FolderKanban, value: '50+', label: 'Projects delivered' },
   { icon: Users, value: '99%', label: 'Client satisfaction' },
   { icon: Award, value: '7+', label: 'Years of experience' },
+  { icon: Clock, value: '< 1 day', label: 'Support response time' },
 ];
 
 /**
@@ -33,8 +44,8 @@ const STATS: Stat[] = [
  */
 export function SocialProof() {
   return (
-    <section id="social-proof" className="relative bg-background py-24 sm:py-32">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <Section id="social-proof" className="bg-background">
+      <Container>
         <ScrollReveal className="text-center">
           <p className="text-sm font-medium text-muted-foreground">
             Trusted by software agencies of every size
@@ -44,10 +55,17 @@ export function SocialProof() {
         {/* Soft clay backing strip behind the logo row (§7.5). */}
         <ScrollReveal delay={0.1} className="clay-surface mt-8 px-6 py-6 sm:px-10">
           <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
+            {/*
+              Wordmark placeholders, not links — so they carry no hover
+              response. A hover state on a non-interactive element promises a
+              click that does not exist. (The previous `grayscale` also stripped
+              `--muted-foreground`'s warm brown-gray back to a cold neutral,
+              working against the palette rather than with it.)
+            */}
             {CLIENT_LOGOS.map((name) => (
               <li
                 key={name}
-                className="text-base font-semibold tracking-tight text-muted-foreground/60 grayscale transition-all duration-300 hover:text-foreground hover:opacity-100 hover:grayscale-0"
+                className="text-base font-semibold tracking-tight text-muted-foreground/70"
               >
                 {name}
               </li>
@@ -68,11 +86,11 @@ export function SocialProof() {
             </ScrollReveal>
           ))}
         </div>
-      </div>
+      </Container>
 
       <div className="mt-20">
         <Testimonials />
       </div>
-    </section>
+    </Section>
   );
 }

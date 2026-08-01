@@ -4,6 +4,8 @@ import { ArrowRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
+import { Container } from './Container';
+import { EYEBROW_CLASS } from './Eyebrow';
 import { HeroBackgroundEffects } from './HeroBackgroundEffects';
 import { ProductShowcase } from './ProductShowcase';
 
@@ -14,8 +16,8 @@ export function Hero() {
     <section id="home" className="relative z-10 overflow-x-clip bg-background">
       {/*
         Hero accent treatment: bounded gradient/glass panel behind the
-        headline + showcase. Base page background stays Alice Blue
-        (--background) everywhere — this decorative layer is intentionally
+        headline + showcase. Base page background stays the warm cream
+        `--background` everywhere — this decorative layer is intentionally
         scoped and does not extend across the full section. `overflow-x-clip`
         (not `overflow-hidden`) on the section lets the product showcase
         below intentionally bleed past the section's bottom edge into
@@ -42,7 +44,7 @@ export function Hero() {
       */}
       <HeroBackgroundEffects />
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-4 px-4 pt-20 pb-8 sm:px-6 sm:pt-28 sm:pb-12 lg:grid-cols-2 lg:gap-8 lg:px-8 lg:pt-32 lg:pb-16">
+      <Container className="grid grid-cols-1 items-center gap-4 pt-20 pb-8 sm:pt-28 sm:pb-12 lg:grid-cols-2 lg:gap-8 lg:pt-32 lg:pb-16">
         {/* Left: copy + CTAs */}
         {/*
           Glassmorphic copy panel (§7.3): the headline block sits on a frosted
@@ -54,7 +56,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press"
+            className={EYEBROW_CLASS}
           >
             Software delivery, without the guesswork
           </motion.span>
@@ -87,22 +89,11 @@ export function Hero() {
           >
             {/* Claymorphic CTAs (§7.3): padding-heavy, fully rounded, moulded
                 depth that spreads on hover and presses inward on click. */}
-            <Button
-              size="lg"
-              onClick={() => navigate('/register')}
-              className="clay-surface clay-lift h-12 rounded-full bg-primary px-8 text-base font-semibold text-primary-foreground hover:bg-primary"
-            >
+            <Button variant="cta" size="cta" onClick={() => navigate('/register')}>
               Get started free
               <ArrowRight data-icon="inline-end" />
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate('/login')}
-              // Clay border, not `--glass-border`: a white translucent border
-              // on a cream surface is invisible. Glass fill, clay outline.
-              className="glass-panel clay-lift h-12 rounded-full border-2 border-primary/60 px-8 text-base font-semibold text-foreground hover:bg-glass-bg"
-            >
+            <Button variant="cta-outline" size="cta" onClick={() => navigate('/login')}>
               Log in
             </Button>
           </motion.div>
@@ -110,7 +101,7 @@ export function Hero() {
 
         {/* Right: premium product showcase — laptop mockup + floating widgets */}
         <ProductShowcase />
-      </div>
+      </Container>
     </section>
   );
 }

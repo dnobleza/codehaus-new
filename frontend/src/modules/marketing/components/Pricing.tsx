@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 import { cn } from '@/lib/utils';
+import { Container } from './Container';
+import { Eyebrow } from './Eyebrow';
 import { ScrollReveal } from './ScrollReveal';
+import { Section } from './Section';
 
 interface Tier {
   name: string;
@@ -61,22 +64,20 @@ export function Pricing() {
   const navigate = useNavigate();
 
   return (
-    <section id="pricing" className="relative bg-secondary/40 py-24 sm:py-32">
+    <Section id="pricing" className="bg-secondary/40">
       <BrandGradientAccent
         intensity="whisper"
         layers={['radial']}
         className="inset-x-0 top-0 -z-10 h-[24rem]"
       />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container>
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
-            Pricing
-          </span>
+          <Eyebrow className="mb-4">Pricing</Eyebrow>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Simple, transparent pricing
           </h2>
-          <p className="mt-4 text-base text-muted-foreground">
+          <p className="mt-4 text-base leading-7 text-muted-foreground">
             Start free, upgrade when your agency grows. No hidden fees, cancel anytime.
           </p>
         </ScrollReveal>
@@ -97,13 +98,14 @@ export function Pricing() {
               )}
               <Card
                 className={cn(
-                  'glass-panel h-full border-glass-border p-2',
+                  'glass-panel clay-lift h-full border-glass-border p-2',
                   // The featured tier earns its emphasis from the deepest clay
                   // shadow rather than a colored ring (§7.6) — depth is this
-                  // palette's hierarchy tool, not saturation.
-                  tier.highlighted
-                    ? 'scale-100 clay-depth-hover lg:scale-105'
-                    : 'glass-clay clay-lift',
+                  // palette's hierarchy tool, not saturation. It rests at the
+                  // hover elevation the other tiers only reach on hover, and
+                  // still takes `clay-lift` so the page's most important card
+                  // is not the one card that ignores the pointer.
+                  tier.highlighted ? 'scale-100 clay-depth-hover lg:scale-105' : 'glass-clay',
                 )}
               >
                 <CardHeader>
@@ -119,7 +121,10 @@ export function Pricing() {
                   </div>
                   <p className="text-sm text-muted-foreground">{tier.description}</p>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-6">
+                {/* `flex-1` + `mt-auto` on the button: tiers have different
+                    feature counts, so without this the shorter cards leave
+                    dead space under a CTA floating mid-card. */}
+                <CardContent className="flex flex-1 flex-col gap-6">
                   <ul className="flex flex-col gap-3">
                     {tier.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-2 text-sm text-foreground">
@@ -132,15 +137,10 @@ export function Pricing() {
                     ))}
                   </ul>
                   <Button
-                    size="lg"
-                    variant={tier.highlighted ? 'default' : 'outline'}
+                    size="cta"
+                    variant={tier.highlighted ? 'cta' : 'cta-outline'}
+                    className="mt-auto"
                     onClick={() => navigate('/register')}
-                    className={cn(
-                      'clay-lift h-12 rounded-full px-8 text-base font-semibold',
-                      tier.highlighted
-                        ? 'clay-surface bg-primary text-primary-foreground hover:bg-primary'
-                        : 'glass-panel border-2 border-primary/60 text-foreground hover:bg-glass-bg',
-                    )}
                   >
                     Get started
                   </Button>
@@ -149,7 +149,7 @@ export function Pricing() {
             </ScrollReveal>
           ))}
         </div>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 }

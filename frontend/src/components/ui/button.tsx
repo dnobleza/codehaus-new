@@ -24,6 +24,20 @@ const buttonVariants = cva(
         destructive:
           'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
         link: 'text-primary-text underline-offset-4 hover:underline',
+        // Marketing CTA pair (design-system.md §7.3). `rounded-full` lives
+        // inside cva so it beats the base `rounded-lg` by source order rather
+        // than needing a per-call override at every call site. `hover:bg-*` is
+        // pinned to the resting fill on purpose: on these buttons the hover
+        // response is the clay lift, not a color shift.
+        cta: 'clay-surface clay-lift rounded-full bg-primary font-semibold text-primary-foreground hover:bg-primary',
+        // Glass fill, clay outline. Deliberately NOT the `glass-panel` utility:
+        // that class sets `border` itself at specificity (0,2,0), which beats
+        // the `border-primary/60` utility (0,1,0) in the same cascade layer and
+        // silently repaints the outline in `--glass-border` — a white
+        // translucent line that is invisible on cream. Composing the fill and
+        // blur directly leaves the clay border as the only border rule.
+        'cta-outline':
+          'clay-lift rounded-full border-2 border-primary/60 bg-glass-bg font-semibold text-foreground backdrop-blur-md backdrop-saturate-150 hover:bg-glass-bg-hover',
       },
       size: {
         default:
@@ -37,6 +51,8 @@ const buttonVariants = cva(
         'icon-sm':
           'size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg',
         'icon-lg': 'size-9',
+        // Landing page CTA footprint: tall, padding-heavy, fully rounded.
+        cta: 'h-12 gap-2 rounded-full px-8 text-base has-data-[icon=inline-end]:pr-6 has-data-[icon=inline-start]:pl-6',
       },
     },
     defaultVariants: {
