@@ -52,8 +52,11 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b border-glass-border bg-glass-bg shadow-[0_1px_0_0_rgba(100,80,60,0.06)] backdrop-blur-xl backdrop-saturate-150">
       <Container as="nav" aria-label="Primary" className="flex h-16 items-center justify-between">
         <a href="#home" className="flex items-center">
-          {/* Fits inside the 64px bar with even space above and below. */}
-          <img src={codehausLogo} alt="CodeHaus" className="h-10 w-auto" />
+          {/* 56px: fills the 64px bar with an even ~4px margin top and
+              bottom. Smaller (h-10/h-12) reads too light against the nav
+              links and the clay CTA; this size holds its own without
+              touching the border. */}
+          <img src={codehausLogo} alt="CodeHaus" className="h-14 w-auto" />
         </a>
 
         <ul className="hidden items-center gap-8 lg:flex">
