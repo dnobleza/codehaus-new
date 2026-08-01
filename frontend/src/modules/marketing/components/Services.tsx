@@ -1,9 +1,12 @@
 import { FileText, FolderKanban, MessageSquare, Receipt } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
+import { Container } from './Container';
+import { Eyebrow } from './Eyebrow';
 import { ScrollReveal } from './ScrollReveal';
+import { Section } from './Section';
 
 type PreviewKind = 'progress' | 'invoice' | 'chart' | 'chat';
 
@@ -49,6 +52,11 @@ const SERVICES: Service[] = [
  * Small mocked UI fragment rendered at the bottom of each Services card
  * (design-system.md §7.12 "feature mini-preview"). Purely decorative,
  * hand-rolled with existing tokens — no chart library involved.
+ *
+ * Type here uses `text-mock`, the one scale entry that sits below the 12px
+ * Caption floor. These render miniature interfaces, not readable content;
+ * `aria-hidden` on the wrapper keeps the mock text out of the accessibility
+ * tree so screen readers get the card's real description instead.
  */
 function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
   if (kind === 'progress') {
@@ -59,7 +67,7 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
           { label: 'Mobile app v2', value: 45 },
         ].map((row) => (
           <div key={row.label} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+            <div className="flex items-center justify-between text-mock text-muted-foreground">
               <span className="truncate">{row.label}</span>
               <span>{row.value}%</span>
             </div>
@@ -90,13 +98,13 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
   if (kind === 'invoice') {
     return (
       <div className="flex flex-col gap-2 rounded-2xl bg-secondary/60 p-3 clay-depth-press">
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex items-center justify-between text-xs">
           <span className="font-medium text-foreground">Invoice #1042</span>
-          <span className="rounded-full bg-success/10 px-2 py-0.5 text-[9px] font-medium text-success">
+          <span className="rounded-full bg-success/10 px-2 py-0.5 text-mock font-medium text-success">
             Paid
           </span>
         </div>
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <div className="flex items-center justify-between text-mock text-muted-foreground">
           <span>Nimbus Labs</span>
           <span className="font-semibold text-foreground">$4,250.00</span>
         </div>
@@ -106,10 +114,10 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
 
   return (
     <div className="flex flex-col gap-1.5 rounded-2xl bg-secondary/60 p-3 clay-depth-press">
-      <div className="max-w-[80%] rounded-lg rounded-bl-sm bg-card px-2.5 py-1.5 text-[10px] text-foreground shadow-sm">
+      <div className="max-w-[80%] rounded-lg rounded-bl-sm bg-card px-2.5 py-1.5 text-mock text-foreground shadow-sm">
         Quote looks great, approving now.
       </div>
-      <div className="ml-auto max-w-[80%] rounded-lg rounded-br-sm bg-primary/90 px-2.5 py-1.5 text-[10px] text-primary-foreground">
+      <div className="ml-auto max-w-[80%] rounded-lg rounded-br-sm bg-primary/90 px-2.5 py-1.5 text-mock text-primary-foreground">
         Awesome — kicking off Monday.
       </div>
     </div>
@@ -118,22 +126,20 @@ function FeatureMiniPreview({ kind }: { kind: PreviewKind }) {
 
 export function Services() {
   return (
-    <section id="services" className="relative bg-background py-24 sm:py-32">
+    <Section id="services" className="bg-background">
       <BrandGradientAccent
         intensity="whisper"
         layers={['linear', 'radial', 'grid']}
         className="inset-x-0 top-0 -z-10 h-[28rem]"
       />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container>
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
-            Platform
-          </span>
+          <Eyebrow className="mb-4">Platform</Eyebrow>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Everything your agency needs, in one place
           </h2>
-          <p className="mt-4 text-base text-muted-foreground">
+          <p className="mt-4 text-base leading-7 text-muted-foreground">
             CodeHaus replaces the spreadsheets, email threads, and disconnected tools with one
             workspace built around how software agencies actually work.
           </p>
@@ -153,16 +159,18 @@ export function Services() {
                     <service.icon className="size-5" aria-hidden="true" />
                   </div>
                   <CardTitle className="text-base font-semibold">{service.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
                   <CardDescription>{service.description}</CardDescription>
-                  <div className="mt-4">
+                  <div aria-hidden="true">
                     <FeatureMiniPreview kind={service.preview} />
                   </div>
-                </CardHeader>
+                </CardContent>
               </Card>
             </ScrollReveal>
           ))}
         </div>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 }

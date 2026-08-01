@@ -156,7 +156,7 @@ function FloatingWidgetCard({
           <widget.icon className="size-4" aria-hidden="true" />
         </span>
         <div className="flex flex-col">
-          <p className="text-[10px] text-muted-foreground">{widget.label}</p>
+          <p className="text-mock text-muted-foreground">{widget.label}</p>
           <p className="flex items-center gap-0.5 text-xs font-semibold text-foreground">
             {widget.value}
             {widget.tone === 'success' && (
@@ -285,7 +285,7 @@ export function ProductShowcase() {
                     <span className="size-2 rounded-full bg-white/25" />
                     <span className="size-2 rounded-full bg-white/25" />
                     <span className="size-2 rounded-full bg-white/25" />
-                    <span className="ml-3 hidden rounded-full bg-white/10 px-3 py-0.5 text-[10px] text-white/50 sm:inline-block">
+                    <span className="ml-3 hidden rounded-full bg-white/10 px-3 py-0.5 text-mock text-white/50 sm:inline-block">
                       app.codehaus.dev/dashboard
                     </span>
                   </div>

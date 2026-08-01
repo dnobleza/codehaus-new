@@ -10,7 +10,10 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
+import { Container } from './Container';
+import { Eyebrow } from './Eyebrow';
 import { ScrollReveal } from './ScrollReveal';
+import { Section } from './Section';
 
 interface Step {
   icon: LucideIcon;
@@ -35,63 +38,85 @@ const STEPS: Step[] = [
  */
 export function Workflow() {
   return (
-    <section id="workflow" className="relative bg-background py-24 sm:py-32">
+    <Section id="workflow" className="bg-background">
       <BrandGradientAccent
         intensity="whisper"
         layers={['radial']}
         className="inset-x-0 top-1/2 -z-10 h-[24rem] -translate-y-1/2"
       />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container>
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
-            How it works
-          </span>
+          <Eyebrow className="mb-4">How it works</Eyebrow>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             From first quote to final payment
           </h2>
-          <p className="mt-4 text-base text-muted-foreground">
+          <p className="mt-4 text-base leading-7 text-muted-foreground">
             Every engagement moves through the same clear pipeline — nothing falls through the
             cracks between teams or tools.
           </p>
         </ScrollReveal>
 
+        {/*
+          Both timelines render the reveal AS the `<li>` (`as="li"`) rather
+          than wrapping one in a `motion.div`. An `<li>` that is not a direct
+          child of its list is not a list item to a screen reader — the step
+          count and ordering would be lost. For the same reason the decorative
+          connector line lives outside the `<ol>`, in the positioning wrapper.
+        */}
+
         {/* Desktop: horizontal timeline */}
         <div className="relative mt-20 hidden lg:block">
-          <div className="absolute inset-x-0 top-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-6 h-px bg-gradient-to-r from-transparent via-border to-transparent"
+          />
           <ol className="relative grid grid-cols-7 gap-4">
             {STEPS.map((step, index) => (
-              <ScrollReveal key={step.title} delay={index * 0.07}>
-                <li className="flex flex-col items-center gap-3 text-center">
-                  <span className="relative z-10 clay-surface flex size-12 items-center justify-center rounded-full bg-card text-foreground">
-                    <step.icon className="size-5" aria-hidden="true" />
-                  </span>
-                  <p className="text-sm font-semibold text-foreground">{step.title}</p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
-                </li>
+              <ScrollReveal
+                key={step.title}
+                as="li"
+                delay={index * 0.07}
+                className="flex flex-col items-center gap-3 text-center"
+              >
+                <span className="relative z-10 clay-surface flex size-12 items-center justify-center rounded-full bg-card text-foreground">
+                  <step.icon className="size-5" aria-hidden="true" />
+                </span>
+                <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                <p className="text-xs text-muted-foreground">{step.description}</p>
               </ScrollReveal>
             ))}
           </ol>
         </div>
 
         {/* Mobile / tablet: vertical timeline */}
-        <ol className="relative mt-16 flex flex-col gap-8 lg:hidden">
-          <div className="absolute top-1 bottom-1 left-6 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
-          {STEPS.map((step, index) => (
-            <ScrollReveal key={step.title} delay={index * 0.06}>
-              <li className="relative flex items-start gap-4 pl-0">
+        <div className="relative mt-16 lg:hidden">
+          <div
+            aria-hidden="true"
+            className="absolute top-1 bottom-1 left-6 w-px bg-gradient-to-b from-transparent via-border to-transparent"
+          />
+          <ol className="relative flex flex-col gap-8">
+            {STEPS.map((step, index) => (
+              <ScrollReveal
+                key={step.title}
+                as="li"
+                delay={index * 0.06}
+                className="relative flex items-start gap-4"
+              >
                 <span className="clay-surface relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full bg-card text-foreground">
                   <step.icon className="size-5" aria-hidden="true" />
                 </span>
-                <div>
-                  <p className="pt-2.5 text-sm font-semibold text-foreground">{step.title}</p>
+                {/* `pt-2.5` optically centers the two-line label block against
+                    the 48px puck; mathematical centering sits it too low. */}
+                <div className="pt-2.5">
+                  <p className="text-sm font-semibold text-foreground">{step.title}</p>
                   <p className="text-xs text-muted-foreground">{step.description}</p>
                 </div>
-              </li>
-            </ScrollReveal>
-          ))}
-        </ol>
-      </div>
-    </section>
+              </ScrollReveal>
+            ))}
+          </ol>
+        </div>
+      </Container>
+    </Section>
   );
 }

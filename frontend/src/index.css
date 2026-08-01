@@ -111,6 +111,18 @@
   /* Scoped to the marketing/landing page only — see LandingLayout.tsx */
   --font-poppins: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 
+  /*
+    Mock-chrome type: the only size below the 12px Caption floor, and the one
+    place it is allowed. The landing page's decorative mocked UI fragments
+    (Services mini-previews, ProductShowcase widget cards) render miniature
+    interfaces that would read as full-size UI at `text-xs`. This is one
+    documented scale entry so those fragments stop reaching for arbitrary
+    `text-[9px]`/`text-[10px]`/`text-[11px]` values. Never use it for content a
+    visitor is expected to read.
+  */
+  --text-mock: 0.625rem;
+  --text-mock--line-height: 0.875rem;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -142,6 +154,7 @@
   --color-brand-ink-foreground: var(--brand-ink-foreground);
 
   --color-glass-bg: var(--glass-bg);
+  --color-glass-bg-hover: var(--glass-bg-hover);
   --color-glass-border: var(--glass-border);
   --color-glass-tint: var(--glass-tint);
 
@@ -158,6 +171,15 @@
   }
   html {
     scroll-behavior: smooth;
+    /*
+      The landing page's sticky header is 65px tall (`h-16` plus its 1px
+      bottom border), so every in-page anchor must stop short of that or the
+      target heading lands underneath it. 5rem clears the bar and leaves ~15px
+      of air, which reads better than landing flush against it. Set on `html`
+      rather than per-section `scroll-mt` so any future anchor is covered
+      without remembering to opt in.
+    */
+    scroll-padding-top: 5rem;
   }
   body {
     @apply bg-background text-foreground font-sans;

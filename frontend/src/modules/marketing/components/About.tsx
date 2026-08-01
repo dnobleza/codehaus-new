@@ -1,4 +1,7 @@
+import { Container } from './Container';
+import { Eyebrow } from './Eyebrow';
 import { ScrollReveal } from './ScrollReveal';
+import { Section } from './Section';
 
 const STATS = [
   { label: 'Agencies onboarded', value: '400+' },
@@ -8,22 +11,20 @@ const STATS = [
 
 export function About() {
   return (
-    <section id="about" className="bg-background py-24 sm:py-32">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
+    <Section id="about" className="bg-background">
+      <Container className="grid grid-cols-1 gap-16 lg:grid-cols-2">
         <ScrollReveal>
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
-            Our story
-          </span>
+          <Eyebrow className="mb-4">Our story</Eyebrow>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Built by people who ran software agencies
           </h2>
-          <p className="mt-4 text-base leading-8 text-muted-foreground">
+          <p className="mt-4 text-base leading-7 text-muted-foreground">
             CodeHaus started as an internal tool for a three-person dev shop that was tired of
             juggling quotes in one app, invoices in another, and project updates over email. Today
             it's the workspace hundreds of agencies use to run client work end-to-end — without
             losing the craftsmanship that got them clients in the first place.
           </p>
-          <p className="mt-4 text-base leading-8 text-muted-foreground">
+          <p className="mt-4 text-base leading-7 text-muted-foreground">
             We obsess over the same thing our customers do: shipping quality work, on time, with
             clients who trust the process.
           </p>
@@ -39,7 +40,7 @@ export function About() {
             ))}
           </dl>
         </ScrollReveal>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 }
