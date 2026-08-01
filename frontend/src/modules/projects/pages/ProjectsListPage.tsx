@@ -40,7 +40,7 @@ export function ProjectsListPage() {
               accessor: (row) => (
                 <Link
                   to={`/client/dashboard/projects/${row.id}`}
-                  className="font-medium text-foreground hover:text-primary hover:underline"
+                  className="font-medium text-foreground hover:text-primary-text hover:underline"
                 >
                   {row.title}
                 </Link>

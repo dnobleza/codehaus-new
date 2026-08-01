@@ -36,7 +36,10 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {(error || helperText) && (
-          <p id={helperId} className={cn('text-xs', error ? 'text-destructive' : 'text-muted-foreground')}>
+          <p
+            id={helperId}
+            className={cn('text-xs', error ? 'text-destructive' : 'text-muted-foreground')}
+          >
             {error ?? helperText}
           </p>
         )}

@@ -5,6 +5,7 @@ const quotationsRepo = require('../repositories/quotations.repository');
 const projectStatusesRepo = require('../repositories/projectStatuses.repository');
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
 const projectOverviewService = require('./projectOverview.service');
+const notificationsService = require('./notifications.service');
 const logger = require('../utils/logger');
 const TAG = '[PROJECTS-SERVICE]';
 
@@ -132,6 +133,22 @@ async function updateProjectStatusAdmin(id, statusCode) {
       await projectOverviewService.generateMilestoneTemplate(id, client);
     }
 
+    // Only on an actual transition. Re-applying the status a project already
+    // has is a no-op for the client, and notifying would let a repeated admin
+    // save spam their inbox with "is now In Development" over and over.
+    if (project.status_code !== statusCode) {
+      const status = await projectStatusesRepo.findByCode(statusCode, client);
+      await notificationsService.notify(
+        {
+          userId: project.client_id,
+          eventType: 'project_status_changed',
+          projectId: id,
+          context: { projectTitle: project.title, statusLabel: status?.label ?? statusCode },
+        },
+        client
+      );
+    }
+
     await client.query('COMMIT');
     logger.info(`${TAG} Project ${id} status set to ${statusCode}`);
     return updated;
@@ -157,6 +174,14 @@ async function acceptProjectAdmin(id) {
   }
 
   const updated = await projectsRepo.updateStatus(id, 'under_review');
+
+  await notificationsService.notify({
+    userId: project.client_id,
+    eventType: 'project_accepted',
+    projectId: id,
+    context: { projectTitle: project.title },
+  });
+
   logger.info(`${TAG} Project ${id} accepted -> under_review`);
   return updated;
 }
@@ -169,6 +194,14 @@ async function declineProjectAdmin(id, reason) {
   }
 
   const updated = await projectsRepo.decline(id, reason);
+
+  await notificationsService.notify({
+    userId: project.client_id,
+    eventType: 'project_declined',
+    projectId: id,
+    context: { projectTitle: project.title, reason },
+  });
+
   logger.info(`${TAG} Project ${id} declined -> cancelled`);
   return updated;
 }
@@ -193,6 +226,14 @@ async function markProjectDeliveredAdmin(id) {
   }
 
   const updated = await projectsRepo.updateStatus(id, 'delivered');
+
+  await notificationsService.notify({
+    userId: project.client_id,
+    eventType: 'project_delivered',
+    projectId: id,
+    context: { projectTitle: project.title },
+  });
+
   logger.info(`${TAG} Project ${id} marked delivered`);
   return updated;
 }

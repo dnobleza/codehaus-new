@@ -16,6 +16,14 @@ export type PaymentStatus = 'pending' | 'verification' | 'verified' | 'rejected'
 export interface Payment {
   id: string;
   project_id: string;
+  /**
+   * The installment this payment was submitted against, resolved server-side
+   * from "the next pending installment" at submission time
+   * (`payments.service.js`). Nullable because the column is nullable for
+   * pre-installment-schedule rows. Present on every API response — the
+   * presenter spreads the full row.
+   */
+  installment_id: string | null;
   payment_method: PaymentMethod;
   /** NUMERIC(12,2) as a string. */
   amount: string;
@@ -27,7 +35,59 @@ export interface Payment {
   created_at: string;
 }
 
+/**
+ * One payment row from `GET /payments` — the client's cross-project list
+ * backing the Invoices page. Deliberately NOT a `Payment`: the list query
+ * omits `proof_of_payment_url` (financial PII the page never renders) and
+ * joins in `installment_sequence`, which the raw row has no column for.
+ */
+export interface PaymentListItem {
+  id: string;
+  project_id: string;
+  payment_method: PaymentMethod;
+  /** NUMERIC(12,2) as a string. */
+  amount: string;
+  reference_number: string | null;
+  status: PaymentStatus;
+  created_at: string;
+  verified_at: string | null;
+  /** `null` when the payment predates the installment schedule. */
+  installment_sequence: number | null;
+}
+
+/**
+ * The client's payments for one project, plus that project's totals. The
+ * Invoices page renders one of these per project.
+ */
+export interface ProjectInvoice {
+  project_id: string;
+  project_title: string;
+  /** Sum of `verified` payments only — money the team has confirmed. NUMERIC as a string. */
+  amount_paid: string;
+  /** Sum of still-pending installments, from the schedule. NUMERIC as a string. */
+  balance_due: string;
+  payments: PaymentListItem[];
+}
+
 export type PaymentInstallmentStatus = 'pending' | 'paid';
+
+/**
+ * One outstanding payment from `GET /payments/due` — the next installment owed
+ * on a project, with the project it belongs to. The client's Payments page
+ * renders one payment form per entry.
+ */
+export interface DuePayment {
+  project_id: string;
+  project_title: string;
+  /**
+   * `true` when a previous submission on this project is still being checked
+   * by the team. The client must not submit again until it clears — resolved
+   * server-side so the rule has one source of truth.
+   */
+  awaiting_verification: boolean;
+  /** The exact installment a submission would settle. */
+  installment: PaymentInstallment;
+}
 
 /**
  * Matches the raw `payment_installments` row shape from

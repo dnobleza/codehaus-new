@@ -128,7 +128,10 @@ export function AdminPaymentsQueuePage() {
         />
       )}
 
-      <Sheet open={Boolean(selectedPayment)} onOpenChange={(open) => !open && setSelectedPayment(null)}>
+      <Sheet
+        open={Boolean(selectedPayment)}
+        onOpenChange={(open) => !open && setSelectedPayment(null)}
+      >
         <SheetContent>
           <SheetHeader>
             <SheetTitle>Payment detail</SheetTitle>
@@ -138,9 +141,13 @@ export function AdminPaymentsQueuePage() {
               <SheetBody>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <dt className="text-muted-foreground">Project</dt>
-                  <dd className="text-right font-medium text-foreground">{selectedPayment.project_id}</dd>
+                  <dd className="text-right font-medium text-foreground">
+                    {selectedPayment.project_id}
+                  </dd>
                   <dt className="text-muted-foreground">Amount</dt>
-                  <dd className="text-right font-medium text-foreground">{formatPHP(selectedPayment.amount)}</dd>
+                  <dd className="text-right font-medium text-foreground">
+                    {formatPHP(selectedPayment.amount)}
+                  </dd>
                   <dt className="text-muted-foreground">Method</dt>
                   <dd className="text-right font-medium text-foreground uppercase">
                     {selectedPayment.payment_method}
@@ -151,14 +158,18 @@ export function AdminPaymentsQueuePage() {
                   </dd>
                   <dt className="text-muted-foreground">Status</dt>
                   <dd className="text-right">
-                    <Badge variant={STATUS_BADGE[selectedPayment.status]}>{selectedPayment.status}</Badge>
+                    <Badge variant={STATUS_BADGE[selectedPayment.status]}>
+                      {selectedPayment.status}
+                    </Badge>
                   </dd>
                 </dl>
                 <PaymentProofPreview proofUrl={selectedPayment.proof_of_payment_url} />
               </SheetBody>
               {selectedPayment.status === 'verification' && (
                 <SheetFooter>
-                  {actionError && <p className="mr-auto text-sm text-destructive">{actionError.message}</p>}
+                  {actionError && (
+                    <p className="mr-auto text-sm text-destructive">{actionError.message}</p>
+                  )}
                   <Button
                     variant="outline"
                     onClick={handleReject}
@@ -166,7 +177,10 @@ export function AdminPaymentsQueuePage() {
                   >
                     Reject
                   </Button>
-                  <Button onClick={handleVerify} disabled={verifyPayment.isPending || rejectPayment.isPending}>
+                  <Button
+                    onClick={handleVerify}
+                    disabled={verifyPayment.isPending || rejectPayment.isPending}
+                  >
                     {verifyPayment.isPending ? 'Verifying...' : 'Verify payment'}
                   </Button>
                 </SheetFooter>

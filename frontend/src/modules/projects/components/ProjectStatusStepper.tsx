@@ -50,7 +50,9 @@ export function ProjectStatusStepper({ status }: ProjectStatusStepperProps) {
         <p className="text-sm font-medium text-foreground">
           {PROJECT_STATUS_PHASES[currentPhaseIndex]?.label ?? 'In Progress'}
         </p>
-        <Badge variant={PROJECT_STATUS_BADGE_VARIANT[status]}>{PROJECT_STATUS_LABELS[status]}</Badge>
+        <Badge variant={PROJECT_STATUS_BADGE_VARIANT[status]}>
+          {PROJECT_STATUS_LABELS[status]}
+        </Badge>
       </div>
 
       <div className="h-1 w-full overflow-hidden rounded-full bg-muted">

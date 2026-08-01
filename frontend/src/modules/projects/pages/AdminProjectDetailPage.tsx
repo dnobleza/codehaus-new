@@ -14,7 +14,11 @@ import type { ApiError } from '@/shared/api/apiClient';
 import { formatPHP } from '@/shared/utils/currency';
 import type { ProjectStatusCode } from '@/shared/types/project.types';
 import { useAdminPackages } from '@/modules/packages/api/packages.queries';
-import { useAdminPayments, useRejectPayment, useVerifyPayment } from '@/modules/payments/api/payments.queries';
+import {
+  useAdminPayments,
+  useRejectPayment,
+  useVerifyPayment,
+} from '@/modules/payments/api/payments.queries';
 import { PaymentProofPreview } from '@/modules/payments/components/PaymentProofPreview';
 import { PaymentScheduleCard } from '@/modules/payments/components/PaymentScheduleCard';
 import {
@@ -26,10 +30,7 @@ import {
 } from '../api/projects.queries';
 import { AdminQuotationBuilder } from '../components/AdminQuotationBuilder';
 import { ProjectStatusStepper } from '../components/ProjectStatusStepper';
-import {
-  PROJECT_STATUS_LABELS,
-  getSelectableNextStatuses,
-} from '../utils/projectStatus';
+import { PROJECT_STATUS_LABELS, getSelectableNextStatuses } from '../utils/projectStatus';
 
 const QUOTATION_STATUS_BADGE = {
   draft: 'neutral',
@@ -92,7 +93,7 @@ export function AdminProjectDetailPage() {
   const quotations = project.quotations ?? [];
   const latestQuotation = quotations[0];
   const pkg = project.package_id ? packages?.find((p) => p.id === project.package_id) : undefined;
-  const packageName = project.package_id ? pkg?.name ?? 'Package' : 'Custom project';
+  const packageName = project.package_id ? (pkg?.name ?? 'Package') : 'Custom project';
 
   // A custom project (no package, or a package flagged custom) has no fixed
   // base price — its price is set later via the quotation. For a standard
@@ -129,7 +130,8 @@ export function AdminProjectDetailPage() {
   // silently disappears depending on payment progress.
   const totalInstallments = project.paymentInstallments?.length ?? 0;
   const pendingInstallments =
-    project.paymentInstallments?.filter((installment) => installment.status === 'pending').length ?? 0;
+    project.paymentInstallments?.filter((installment) => installment.status === 'pending').length ??
+    0;
   const canDeliver = totalInstallments > 0 && pendingInstallments === 0;
   const deliverError = markDelivered.error as ApiError | null;
 
@@ -181,11 +183,15 @@ export function AdminProjectDetailPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {reviewError && (
-              <Alert variant="danger" title="Couldn't update this request" description={reviewError.message} />
+              <Alert
+                variant="danger"
+                title="Couldn't update this request"
+                description={reviewError.message}
+              />
             )}
             <p className="text-xs text-muted-foreground">
-              Accept to begin reviewing this request (moves it to Under Review, where you can prepare a
-              quotation), or decline it with a reason the client will see.
+              Accept to begin reviewing this request (moves it to Under Review, where you can
+              prepare a quotation), or decline it with a reason the client will see.
             </p>
 
             {!showDeclineForm ? (
@@ -236,39 +242,48 @@ export function AdminProjectDetailPage() {
       )}
 
       {!isSubmitted && (
-      <Card>
-        <CardHeader>
-          <CardTitle>Update status</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {statusError && <Alert variant="danger" title="Couldn't update status" description={statusError.message} />}
-          <p className="text-xs text-muted-foreground">
-            Only sensible next steps are offered here; the API itself does not enforce a transition
-            graph, but jumping straight from "Draft" to "Completed" would be a confusing admin action.
-          </p>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="w-64">
-              <Select
-                label="New status"
-                value={nextStatus ?? project.status_code}
-                onChange={(event) => setNextStatus(event.target.value as ProjectStatusCode)}
+        <Card>
+          <CardHeader>
+            <CardTitle>Update status</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {statusError && (
+              <Alert
+                variant="danger"
+                title="Couldn't update status"
+                description={statusError.message}
+              />
+            )}
+            <p className="text-xs text-muted-foreground">
+              Only sensible next steps are offered here; the API itself does not enforce a
+              transition graph, but jumping straight from "Draft" to "Completed" would be a
+              confusing admin action.
+            </p>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="w-64">
+                <Select
+                  label="New status"
+                  value={nextStatus ?? project.status_code}
+                  onChange={(event) => setNextStatus(event.target.value as ProjectStatusCode)}
+                >
+                  {statusOptions.map((status) => (
+                    <option key={status} value={status}>
+                      {PROJECT_STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <Button
+                onClick={handleUpdateStatus}
+                disabled={
+                  updateStatus.isPending || !nextStatus || nextStatus === project.status_code
+                }
               >
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {PROJECT_STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </Select>
+                {updateStatus.isPending ? 'Updating...' : 'Update status'}
+              </Button>
             </div>
-            <Button
-              onClick={handleUpdateStatus}
-              disabled={updateStatus.isPending || !nextStatus || nextStatus === project.status_code}
-            >
-              {updateStatus.isPending ? 'Updating...' : 'Update status'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
       )}
 
       <Card>
@@ -279,7 +294,9 @@ export function AdminProjectDetailPage() {
           {latestQuotation && latestQuotation.status !== 'draft' && (
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-foreground">{latestQuotation.quotation_number}</p>
+                <p className="text-sm font-medium text-foreground">
+                  {latestQuotation.quotation_number}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {formatPHP(latestQuotation.total_amount)} &middot;{' '}
                   {new Date(latestQuotation.created_at).toLocaleDateString()}
@@ -300,7 +317,11 @@ export function AdminProjectDetailPage() {
           )}
 
           {!needsQuotationAction && canPrepareRevision && !showQuotationBuilder && (
-            <Button variant="outline" className="self-start" onClick={() => setShowQuotationBuilder(true)}>
+            <Button
+              variant="outline"
+              className="self-start"
+              onClick={() => setShowQuotationBuilder(true)}
+            >
               Prepare a new quotation
             </Button>
           )}
@@ -326,7 +347,9 @@ export function AdminProjectDetailPage() {
                 <div key={quotation.id} className="flex items-center justify-between text-sm">
                   <span className="text-foreground">{quotation.quotation_number}</span>
                   <span className="text-muted-foreground">{formatPHP(quotation.total_amount)}</span>
-                  <Badge variant={QUOTATION_STATUS_BADGE[quotation.status]}>{quotation.status}</Badge>
+                  <Badge variant={QUOTATION_STATUS_BADGE[quotation.status]}>
+                    {quotation.status}
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -341,17 +364,25 @@ export function AdminProjectDetailPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Payment verification</CardTitle>
-              <Badge variant={PAYMENT_STATUS_BADGE[latestPayment.status]}>{latestPayment.status}</Badge>
+              <Badge variant={PAYMENT_STATUS_BADGE[latestPayment.status]}>
+                {latestPayment.status}
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <dl className="grid grid-cols-2 gap-2 text-sm">
               <dt className="text-muted-foreground">Amount</dt>
-              <dd className="text-right font-medium text-foreground">{formatPHP(latestPayment.amount)}</dd>
+              <dd className="text-right font-medium text-foreground">
+                {formatPHP(latestPayment.amount)}
+              </dd>
               <dt className="text-muted-foreground">Method</dt>
-              <dd className="text-right font-medium text-foreground uppercase">{latestPayment.payment_method}</dd>
+              <dd className="text-right font-medium text-foreground uppercase">
+                {latestPayment.payment_method}
+              </dd>
               <dt className="text-muted-foreground">Reference number</dt>
-              <dd className="text-right font-medium text-foreground">{latestPayment.reference_number ?? '—'}</dd>
+              <dd className="text-right font-medium text-foreground">
+                {latestPayment.reference_number ?? '—'}
+              </dd>
             </dl>
             <PaymentProofPreview proofUrl={latestPayment.proof_of_payment_url} />
 

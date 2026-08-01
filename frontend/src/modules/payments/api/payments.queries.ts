@@ -18,7 +18,35 @@ export function useSubmitPayment(projectId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.listByProject(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      // The Invoices page lists this payment too, so it must not go stale.
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.mine() });
+      // And the Payments page must re-check what's still owed — this
+      // submission moves the project into `awaiting_verification`.
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.due() });
     },
+  });
+}
+
+/** Client's payments across every project, grouped by project — backs the Invoices page. */
+export function useMyInvoices() {
+  return useQuery({
+    queryKey: queryKeys.payments.mine(),
+    queryFn: () => paymentsApi.listMine(),
+  });
+}
+
+/**
+ * What the client currently owes, one entry per project — backs the Payments
+ * page. Polls on the same 8s rhythm the project detail uses, so an entry
+ * blocked on `awaiting_verification` unblocks on its own once the team
+ * verifies, without the client reloading.
+ */
+export function useDuePayments() {
+  return useQuery({
+    queryKey: queryKeys.payments.due(),
+    queryFn: () => paymentsApi.listDue(),
+    refetchInterval: (query) =>
+      query.state.data?.some((due) => due.awaiting_verification) ? 8000 : false,
   });
 }
 
@@ -118,7 +146,10 @@ export function useAdminPayments(filters?: ListAdminPaymentsFilters) {
   });
 }
 
-function invalidateAdminPaymentCaches(queryClient: ReturnType<typeof useQueryClient>, projectId?: string) {
+function invalidateAdminPaymentCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId?: string,
+) {
   queryClient.invalidateQueries({ queryKey: queryKeys.payments.adminAll() });
   queryClient.invalidateQueries({ queryKey: queryKeys.projects.adminAll() });
   if (projectId) {

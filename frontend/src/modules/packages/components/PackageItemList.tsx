@@ -82,7 +82,12 @@ export function PackageItemList({
           aria-label={placeholder}
           className="flex-1"
         />
-        <Button type="button" variant="outline" onClick={handleAdd} disabled={isMutating || !draft.trim()}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleAdd}
+          disabled={isMutating || !draft.trim()}
+        >
           <Plus className="size-4" aria-hidden="true" />
           Add
         </Button>

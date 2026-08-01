@@ -54,7 +54,13 @@ interface DropdownMenuItemProps extends MenuPrimitive.Item.Props {
   icon?: React.ReactNode;
 }
 
-function DropdownMenuItem({ className, variant = 'default', icon, children, ...props }: DropdownMenuItemProps) {
+function DropdownMenuItem({
+  className,
+  variant = 'default',
+  icon,
+  children,
+  ...props
+}: DropdownMenuItemProps) {
   return (
     <MenuPrimitive.Item
       className={cn(
@@ -80,4 +86,10 @@ function DropdownMenuSeparator({ className, ...props }: React.ComponentProps<'di
   return <div role="separator" className={cn('my-1 h-px bg-border', className)} {...props} />;
 }
 
-export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator };
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+};

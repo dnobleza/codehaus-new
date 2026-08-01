@@ -43,6 +43,33 @@ exports.list = async (req, res, next) => {
   }
 };
 
+// Client's own payments across every project they own, grouped by project
+// (GET /payments). clientId always comes from the verified JWT subject.
+// No presenter here: this list deliberately omits proof_of_payment_url
+// (see payments.repository.js#listByClientWithContext).
+exports.listMine = async (req, res, next) => {
+  try {
+    const invoices = await paymentsService.listInvoicesForClient(req.user.id);
+    logger.info(`${TAG} Listed invoices across ${invoices.length} projects for client ${req.user.id}`);
+    res.status(200).json({ success: true, message: 'Invoices retrieved successfully', data: invoices });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
+// What the client currently owes, one entry per project, each with the exact
+// installment a submission would settle (GET /payments/due). clientId always
+// comes from the verified JWT subject.
+exports.listDue = async (req, res, next) => {
+  try {
+    const due = await paymentsService.listDuePaymentsForClient(req.user.id);
+    logger.info(`${TAG} Listed ${due.length} due payments for client ${req.user.id}`);
+    res.status(200).json({ success: true, message: 'Due payments retrieved successfully', data: due });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
 // Authenticated proof-of-payment file stream. Authorization (owner client
 // OR ADMIN/STAFF) and the not-found-vs-unauthorized 404 collapsing both
 // happen in the service layer -- see payments.service.js's

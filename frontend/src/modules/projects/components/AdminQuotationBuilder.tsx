@@ -82,7 +82,9 @@ export function AdminQuotationBuilder({
   const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(
     new Set(draftQuotation?.addons?.map((addon) => addon.addonId) ?? []),
   );
-  const [discountAmount, setDiscountAmount] = useState<string>(draftQuotation?.discount_amount ?? '0');
+  const [discountAmount, setDiscountAmount] = useState<string>(
+    draftQuotation?.discount_amount ?? '0',
+  );
 
   const createAndSend = useCreateAndSendQuotation(projectId);
   const editDraft = useEditDraftQuotation(projectId);
@@ -109,7 +111,10 @@ export function AdminQuotationBuilder({
   const discount = toNumber(discountAmount) || 0;
   const total = Math.max(0, basePrice + addonsTotal - discount);
   const timelineLabel = selectedPackage
-    ? formatTimelineRange(selectedPackage.estimated_timeline_min_days, selectedPackage.estimated_timeline_max_days)
+    ? formatTimelineRange(
+        selectedPackage.estimated_timeline_min_days,
+        selectedPackage.estimated_timeline_max_days,
+      )
     : null;
 
   function toggleAddon(addonId: string) {
@@ -157,7 +162,13 @@ export function AdminQuotationBuilder({
 
   return (
     <div className="flex flex-col gap-4">
-      {apiError && <Alert variant="danger" title="Couldn't save this quotation" description={apiError.message} />}
+      {apiError && (
+        <Alert
+          variant="danger"
+          title="Couldn't save this quotation"
+          description={apiError.message}
+        />
+      )}
 
       <Select
         label="Package"
@@ -189,7 +200,10 @@ export function AdminQuotationBuilder({
         <QuotationSummaryCard
           packageLabel={selectedPackage.name}
           basePrice={basePrice}
-          addonLines={selectedAddons.map((addon) => ({ label: addon.name, amount: toNumber(addon.price) }))}
+          addonLines={selectedAddons.map((addon) => ({
+            label: addon.name,
+            amount: toNumber(addon.price),
+          }))}
           total={total}
           timelineLabel={timelineLabel}
         />

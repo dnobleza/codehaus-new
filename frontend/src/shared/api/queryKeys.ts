@@ -38,10 +38,29 @@ export const queryKeys = {
       [...queryKeys.projects.adminAll(), 'list', filters ?? {}] as const,
     adminDetail: (id: string) => [...queryKeys.projects.adminAll(), 'detail', id] as const,
   },
+  notifications: {
+    all: ['notifications'] as const,
+    // The inbox and its unread count arrive together from GET /notifications,
+    // so there is no separate key for the badge count.
+    list: () => [...queryKeys.notifications.all, 'list'] as const,
+  },
+  quotations: {
+    all: ['quotations'] as const,
+    // Client's own cross-project quotation list (GET /quotations). There is
+    // no `detail` key: the quotation detail page reads its quotation out of
+    // the parent project's `projects.detail` query rather than fetching one
+    // directly, since the API has no GET /quotations/:id.
+    list: () => [...queryKeys.quotations.all, 'list'] as const,
+  },
   payments: {
     all: ['payments'] as const,
     listByProject: (projectId: string) =>
       [...queryKeys.payments.all, 'project', projectId] as const,
+    // Client's own cross-project payment list (GET /payments), grouped by
+    // project — backs the Invoices page.
+    mine: () => [...queryKeys.payments.all, 'mine'] as const,
+    // What the client currently owes (GET /payments/due) — backs the Payments page.
+    due: () => [...queryKeys.payments.all, 'due'] as const,
     // Admin/staff-scoped verification queue (GET /admin/payments).
     adminAll: () => [...queryKeys.payments.all, 'admin'] as const,
     adminList: (filters?: unknown) =>

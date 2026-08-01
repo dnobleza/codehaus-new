@@ -93,7 +93,7 @@ export function AdminAddonsPage() {
                 <button
                   type="button"
                   onClick={() => openEditForm(row)}
-                  className="font-medium text-foreground hover:text-primary hover:underline"
+                  className="font-medium text-foreground hover:text-primary-text hover:underline"
                 >
                   {row.name}
                 </button>
@@ -132,7 +132,11 @@ export function AdminAddonsPage() {
                     >
                       {row.is_active ? 'Deactivate' : 'Activate'}
                     </DropdownMenuItem>
-                    <DropdownMenuItem icon={<Trash2 />} variant="destructive" onClick={() => setPendingDelete(row)}>
+                    <DropdownMenuItem
+                      icon={<Trash2 />}
+                      variant="destructive"
+                      onClick={() => setPendingDelete(row)}
+                    >
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>

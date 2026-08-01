@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const paymentsRepo = require('../repositories/payments.repository');
 const projectsRepo = require('../repositories/projects.repository');
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
+const notificationsService = require('./notifications.service');
 const { resolvePaymentProofPath } = require('../middleware/upload.middleware');
 const logger = require('../utils/logger');
 const TAG = '[PAYMENTS-SERVICE]';
@@ -10,6 +11,29 @@ function httpError(statusCode, message) {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+}
+
+// Notifies the client who owns a project. Takes the caller's `db` (an open
+// transaction client, or the pool) so the notification commits atomically with
+// the event that caused it -- a client must never be told their payment was
+// verified by a transaction that then rolled back.
+//
+// `notify` itself never throws (see notifications.service.js), so a failure
+// here cannot roll back the payment action it accompanies.
+async function notifyProjectClient(db, projectId, eventType, context = {}) {
+  const { rows } = await db.query('SELECT client_id, title FROM projects WHERE id = $1', [projectId]);
+  const project = rows[0];
+  if (!project) return;
+
+  await notificationsService.notify(
+    {
+      userId: project.client_id,
+      eventType,
+      projectId,
+      context: { projectTitle: project.title, ...context },
+    },
+    db
+  );
 }
 
 // A client submits a payment against whichever installment is next in
@@ -115,6 +139,10 @@ async function verifyPayment(paymentId, verifiedByUserId) {
       await projectsRepo.updateStatus(payment.project_id, 'accepted', client);
     }
 
+    await notifyProjectClient(client, payment.project_id, 'payment_verified', {
+      amount: payment.amount,
+    });
+
     await client.query('COMMIT');
     logger.info(
       `${TAG} Payment ${paymentId} verified by user ${verifiedByUserId}; installment ${installment.sequence} marked paid`
@@ -142,6 +170,8 @@ async function rejectPayment(paymentId, verifiedByUserId) {
     verifiedBy: verifiedByUserId,
     verifiedAt: new Date(),
   });
+  await notifyProjectClient(pool, payment.project_id, 'payment_rejected');
+
   logger.info(`${TAG} Payment ${paymentId} rejected by user ${verifiedByUserId}`);
   return updated;
 }
@@ -173,9 +203,90 @@ async function resolveProofForAccess({ projectId, paymentId, requestingUser }) {
   };
 }
 
+// Backs the client's Invoices page: every payment the client has made,
+// grouped by the project it belongs to, with per-project totals.
+//
+// Two queries total, never one-per-project. Grouping happens here rather than
+// in SQL because the per-group totals are business rules, not data shape:
+//
+//   `amount_paid` counts ONLY `verified` payments. A payment sitting in
+//   `verification` is money the client has sent but the team hasn't
+//   confirmed; counting it would tell the client they have paid more than
+//   they demonstrably have. A `rejected` one was never valid at all.
+//
+//   `balance_due` comes from the installment schedule, not from subtracting
+//   payments — the schedule is the source of truth for what is owed.
+async function listInvoicesForClient(clientId) {
+  const [payments, balances] = await Promise.all([
+    paymentsRepo.listByClientWithContext(clientId),
+    paymentInstallmentsRepo.outstandingBalanceByClient(clientId),
+  ]);
+
+  const balanceByProject = new Map(balances.map((row) => [row.project_id, row.balance_due]));
+  const groups = new Map();
+
+  for (const payment of payments) {
+    const { project_id: projectId, project_title: projectTitle, ...rest } = payment;
+
+    if (!groups.has(projectId)) {
+      groups.set(projectId, {
+        project_id: projectId,
+        project_title: projectTitle,
+        balance_due: balanceByProject.get(projectId) ?? '0',
+        amount_paid: 0,
+        payments: [],
+      });
+    }
+
+    const group = groups.get(projectId);
+    group.payments.push({ ...rest, project_id: projectId });
+    if (payment.status === 'verified') {
+      group.amount_paid += Number(payment.amount);
+    }
+  }
+
+  // `payments` is already ordered newest-first, so insertion order puts the
+  // most recently active project first — the one the client most likely wants.
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    amount_paid: group.amount_paid.toFixed(2),
+    balance_due: String(group.balance_due),
+  }));
+}
+
+// Backs the client's Payments page: everything the client currently owes, one
+// entry per project, each carrying the exact installment a submission would be
+// applied to.
+//
+// Reshapes the flat query row into `{ project, awaitingVerification,
+// installment }` so the installment object matches the shape the payment form
+// and the rest of the API already use — the page can hand it straight to the
+// submit endpoint without reassembling fields.
+async function listDuePaymentsForClient(clientId) {
+  const rows = await paymentInstallmentsRepo.listNextDueByClient(clientId);
+
+  return rows.map((row) => {
+    const {
+      project_title_id: projectId,
+      project_title: projectTitle,
+      awaiting_verification: awaitingVerification,
+      ...installment
+    } = row;
+
+    return {
+      project_id: projectId,
+      project_title: projectTitle,
+      awaiting_verification: awaitingVerification,
+      installment,
+    };
+  });
+}
+
 module.exports = {
   createPayment,
   listPaymentsForClientProject,
+  listInvoicesForClient,
+  listDuePaymentsForClient,
   listPaymentsAdmin,
   verifyPayment,
   rejectPayment,

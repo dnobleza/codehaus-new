@@ -4,6 +4,7 @@ const projectsRepo = require('../repositories/projects.repository');
 const packagesRepo = require('../repositories/packages.repository');
 const addonsRepo = require('../repositories/addons.repository');
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
+const notificationsService = require('./notifications.service');
 const logger = require('../utils/logger');
 const TAG = '[QUOTATIONS-SERVICE]';
 
@@ -58,6 +59,26 @@ function computeTotal(basePrice, discountAmount, addonRows) {
   const total = toMoney(basePrice - discountAmount + addonsTotal);
   if (total < 0) throw httpError(400, 'Discount cannot exceed the package price plus add-ons total');
   return total;
+}
+
+// Tells the owning client a quotation is now waiting for them. Runs inside the
+// caller's transaction so the notification commits with the send, and never
+// throws (see notifications.service.js) so it cannot roll one back.
+async function notifyQuotationSent(dbClient, { project, quotation }) {
+  if (!project) return;
+  await notificationsService.notify(
+    {
+      userId: project.client_id,
+      eventType: 'quotation_sent',
+      projectId: quotation.project_id,
+      context: {
+        projectTitle: project.title,
+        quotationId: quotation.id,
+        quotationNumber: quotation.quotation_number,
+      },
+    },
+    dbClient
+  );
 }
 
 const INSTALLMENT_PERCENTAGES = [50, 20, 10, 10, 10];
@@ -222,6 +243,8 @@ async function adminCreateAndSendQuotation({ projectId, packageId, addonIds, dis
 
     await projectsRepo.updateStatus(projectId, 'quotation_sent', client);
 
+    await notifyQuotationSent(client, { project, quotation });
+
     await client.query('COMMIT');
     logger.info(`${TAG} Quotation ${quotation.id} created and sent for project ${projectId}`);
     return quotation;
@@ -312,6 +335,11 @@ async function adminSendQuotation({ projectId, quotationId }) {
     const updated = await quotationsRepo.setStatus(quotationId, { status: 'sent', sentAt: new Date() }, client);
     await projectsRepo.updateStatus(projectId, 'quotation_sent', client);
 
+    const { rows: projectRows } = await client.query('SELECT client_id, title FROM projects WHERE id = $1', [
+      projectId,
+    ]);
+    await notifyQuotationSent(client, { project: projectRows[0], quotation: updated });
+
     await client.query('COMMIT');
     logger.info(`${TAG} Draft quotation ${quotationId} sent`);
     return updated;
@@ -385,8 +413,16 @@ async function respondToQuotation({ projectId, quotationId, clientId, decision }
   }
 }
 
+// A client reading their own quotations -- no business rules apply, so this
+// is a deliberate pass-through rather than an artificial abstraction. The
+// ownership scope lives in the repository's SQL predicate.
+async function listQuotationsForClient(clientId) {
+  return quotationsRepo.listByClient(clientId);
+}
+
 module.exports = {
   createClientQuotationRequest,
+  listQuotationsForClient,
   adminCreateAndSendQuotation,
   adminEditDraftQuotation,
   adminSendQuotation,

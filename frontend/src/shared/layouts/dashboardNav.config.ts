@@ -1,7 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   BarChart3,
-  Bell,
   CreditCard,
   FileText,
   FolderKanban,
@@ -27,11 +26,10 @@ export interface DashboardNavItem {
 export const CLIENT_NAV_ITEMS: DashboardNavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/client/dashboard' },
   { label: 'Projects', icon: FolderKanban, path: '/client/dashboard/projects' },
-  { label: 'Quotations', icon: FileText, disabled: true },
-  { label: 'Invoices', icon: Receipt, disabled: true },
-  { label: 'Payments', icon: CreditCard, disabled: true },
+  { label: 'Quotations', icon: FileText, path: '/client/dashboard/quotations' },
+  { label: 'Invoices', icon: Receipt, path: '/client/dashboard/invoices' },
+  { label: 'Payments', icon: CreditCard, path: '/client/dashboard/payments' },
   { label: 'Messages', icon: MessageSquare, disabled: true },
-  { label: 'Notifications', icon: Bell, disabled: true },
   { label: 'Settings', icon: Settings, disabled: true },
 ];
 

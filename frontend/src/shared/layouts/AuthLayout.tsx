@@ -10,9 +10,8 @@ export function AuthLayout() {
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-12">
       {/*
         Faint app-wide brand accent, same visual language as the marketing
-        Hero but toned down for a data-dense/form surface — see
-        BrandGradientAccent's "subtle" intensity. Base page background stays
-        Alice Blue (--background) unchanged.
+        Hero but toned down for a form surface — see BrandGradientAccent's
+        "subtle" intensity. Token-driven, so it follows the clay palette.
       */}
       <BrandGradientAccent className="inset-0 -z-10" />
 
@@ -21,7 +20,9 @@ export function AuthLayout() {
           <img src={codehausLogo} alt="CodeHaus" className="h-20 w-auto" />
         </Link>
 
-        <Card className="shadow-sm">
+        {/* Frosted card with clay depth (design-system.md §7.20) — the accent
+            wash above stays visible through it. */}
+        <Card className="glass-panel glass-clay border-glass-border p-2">
           <Outlet />
         </Card>
       </div>

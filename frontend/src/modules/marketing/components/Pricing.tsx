@@ -70,21 +70,24 @@ export function Pricing() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-flex items-center rounded-full border border-primary/30 bg-primary/8 px-4 py-1.5 text-xs font-medium text-primary">
+          <span className="mb-4 inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-4 py-1.5 text-xs font-semibold text-foreground clay-depth-press">
             Pricing
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Simple, transparent pricing
           </h2>
           <p className="mt-4 text-base text-muted-foreground">
-            Start free, upgrade when your agency grows. No hidden fees, cancel
-            anytime.
+            Start free, upgrade when your agency grows. No hidden fees, cancel anytime.
           </p>
         </ScrollReveal>
 
         <div className="mt-16 grid grid-cols-1 gap-6 lg:grid-cols-3">
           {TIERS.map((tier, index) => (
-            <ScrollReveal key={tier.name} delay={index * 0.08} className={tier.highlighted ? 'relative' : undefined}>
+            <ScrollReveal
+              key={tier.name}
+              delay={index * 0.08}
+              className={tier.highlighted ? 'relative' : undefined}
+            >
               {tier.highlighted && (
                 <BrandGradientAccent
                   intensity="strong"
@@ -94,15 +97,18 @@ export function Pricing() {
               )}
               <Card
                 className={cn(
-                  'h-full',
+                  'glass-panel h-full border-glass-border p-2',
+                  // The featured tier earns its emphasis from the deepest clay
+                  // shadow rather than a colored ring (§7.6) — depth is this
+                  // palette's hierarchy tool, not saturation.
                   tier.highlighted
-                    ? 'scale-100 ring-2 ring-primary shadow-xl lg:scale-105'
-                    : 'border-transparent shadow-sm ring-1 ring-foreground/8 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-primary/15',
+                    ? 'scale-100 clay-depth-hover lg:scale-105'
+                    : 'glass-clay clay-lift',
                 )}
               >
                 <CardHeader>
                   {tier.highlighted && (
-                    <span className="mb-2 inline-flex w-fit items-center rounded-full bg-gradient-to-r from-primary to-primary-hover px-3 py-1 text-xs font-medium text-primary-foreground">
+                    <span className="clay-surface mb-2 inline-flex w-fit items-center rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground">
                       Most popular
                     </span>
                   )}
@@ -117,7 +123,10 @@ export function Pricing() {
                   <ul className="flex flex-col gap-3">
                     {tier.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-2 text-sm text-foreground">
-                        <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                        <Check
+                          className="mt-0.5 size-4 shrink-0 text-primary-text"
+                          aria-hidden="true"
+                        />
                         {feature}
                       </li>
                     ))}
@@ -126,6 +135,12 @@ export function Pricing() {
                     size="lg"
                     variant={tier.highlighted ? 'default' : 'outline'}
                     onClick={() => navigate('/register')}
+                    className={cn(
+                      'clay-lift h-12 rounded-full px-8 text-base font-semibold',
+                      tier.highlighted
+                        ? 'clay-surface bg-primary text-primary-foreground hover:bg-primary'
+                        : 'glass-panel border-2 border-primary/60 text-foreground hover:bg-glass-bg',
+                    )}
                   >
                     Get started
                   </Button>

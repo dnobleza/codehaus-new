@@ -50,7 +50,10 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           {children}
         </select>
         {(error || helperText) && (
-          <p id={helperId} className={cn('text-xs', error ? 'text-destructive' : 'text-muted-foreground')}>
+          <p
+            id={helperId}
+            className={cn('text-xs', error ? 'text-destructive' : 'text-muted-foreground')}
+          >
             {error ?? helperText}
           </p>
         )}

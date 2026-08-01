@@ -18,11 +18,7 @@ import { formatPHP } from '@/shared/utils/currency';
 import { formatTimelineRange } from '@/shared/utils/timeline';
 import type { Package } from '@/shared/types/package.types';
 import type { ApiError } from '@/shared/api/apiClient';
-import {
-  useAdminPackages,
-  useDeletePackage,
-  useSetPackageActive,
-} from '../api/packages.queries';
+import { useAdminPackages, useDeletePackage, useSetPackageActive } from '../api/packages.queries';
 
 /**
  * Admin package catalog table (design-system.md §3.4's clients/invoices
@@ -53,7 +49,8 @@ export function AdminPackagesPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Packages</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage project packages available to clients. Only active packages appear in the client portal.
+            Manage project packages available to clients. Only active packages appear in the client
+            portal.
           </p>
         </div>
         <Link to="/admin/dashboard/packages/new" className={buttonVariants({ size: 'lg' })}>
@@ -79,7 +76,7 @@ export function AdminPackagesPage() {
               accessor: (row) => (
                 <Link
                   to={`/admin/dashboard/packages/${row.id}/edit`}
-                  className="font-medium text-foreground hover:text-primary hover:underline"
+                  className="font-medium text-foreground hover:text-primary-text hover:underline"
                 >
                   {row.name}
                 </Link>
@@ -92,7 +89,10 @@ export function AdminPackagesPage() {
             {
               header: 'Timeline',
               accessor: (row) =>
-                formatTimelineRange(row.estimated_timeline_min_days, row.estimated_timeline_max_days) ?? '—',
+                formatTimelineRange(
+                  row.estimated_timeline_min_days,
+                  row.estimated_timeline_max_days,
+                ) ?? '—',
             },
             {
               header: 'Order',
@@ -109,7 +109,9 @@ export function AdminPackagesPage() {
             {
               header: 'Actions',
               className: 'text-right',
-              accessor: (row) => <PackageRowActions pkg={row} onRequestDelete={() => setPendingDelete(row)} />,
+              accessor: (row) => (
+                <PackageRowActions pkg={row} onRequestDelete={() => setPendingDelete(row)} />
+              ),
             },
           ]}
           rows={packages ?? []}
@@ -131,7 +133,13 @@ export function AdminPackagesPage() {
 }
 
 /** Row actions consolidated behind a single Dropdown trigger (design-system.md §2.8), replacing three separate always-visible icon buttons. */
-function PackageRowActions({ pkg, onRequestDelete }: { pkg: Package; onRequestDelete: () => void }) {
+function PackageRowActions({
+  pkg,
+  onRequestDelete,
+}: {
+  pkg: Package;
+  onRequestDelete: () => void;
+}) {
   const navigate = useNavigate();
   const setActive = useSetPackageActive(pkg.id);
 
@@ -144,7 +152,10 @@ function PackageRowActions({ pkg, onRequestDelete }: { pkg: Package; onRequestDe
         <MoreHorizontal className="size-4" aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuItem icon={<Pencil />} onClick={() => navigate(`/admin/dashboard/packages/${pkg.id}/edit`)}>
+        <DropdownMenuItem
+          icon={<Pencil />}
+          onClick={() => navigate(`/admin/dashboard/packages/${pkg.id}/edit`)}
+        >
           Edit
         </DropdownMenuItem>
         <DropdownMenuItem

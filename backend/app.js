@@ -11,6 +11,9 @@ const authRoutes = require('./src/routes/auth.route');
 const packagesRoutes = require('./src/routes/packages.route');
 const addonsRoutes = require('./src/routes/addons.route');
 const projectsRoutes = require('./src/routes/projects.route');
+const quotationsRoutes = require('./src/routes/quotations.route');
+const paymentsRoutes = require('./src/routes/payments.route');
+const notificationsRoutes = require('./src/routes/notifications.route');
 const adminPackagesRoutes = require('./src/routes/adminPackages.route');
 const adminAddonsRoutes = require('./src/routes/adminAddons.route');
 const adminProjectsRoutes = require('./src/routes/adminProjects.route');
@@ -18,6 +21,14 @@ const adminPaymentsRoutes = require('./src/routes/adminPayments.route');
 const errorHandler = require('./src/middleware/errorhandler.middleware');
 
 const app = express();
+
+// Trust the first hop in front of this app (reverse proxy/load balancer) so
+// req.ip reflects the real client address instead of the proxy's address.
+// Without this, express-rate-limit keys every client behind the proxy into
+// a single shared bucket (see rateLimiter.middleware.js). No deployment docs
+// in this repo specify a proxy chain depth, so default to a single hop; bump
+// this if the app is ever deployed behind more than one reverse-proxy layer.
+app.set('trust proxy', 1);
 
 const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').filter(Boolean);
 
@@ -47,6 +58,9 @@ app.use('/auth', authRoutes);
 app.use('/packages', packagesRoutes);
 app.use('/addons', addonsRoutes);
 app.use('/projects', projectsRoutes);
+app.use('/quotations', quotationsRoutes);
+app.use('/payments', paymentsRoutes);
+app.use('/notifications', notificationsRoutes);
 app.use('/admin/packages', adminPackagesRoutes);
 app.use('/admin/addons', adminAddonsRoutes);
 app.use('/admin/projects', adminProjectsRoutes);

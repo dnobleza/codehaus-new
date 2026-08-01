@@ -1,6 +1,13 @@
 import { Sparkles } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -16,14 +23,14 @@ interface PackageCardProps {
 
 /** Package catalog card (design-system.md §3 package browser). Custom project renders as a distinct card. */
 export function PackageCard({ pkg, isSelected, onSelect }: PackageCardProps) {
-  const timeline = formatTimelineRange(pkg.estimated_timeline_min_days, pkg.estimated_timeline_max_days);
+  const timeline = formatTimelineRange(
+    pkg.estimated_timeline_min_days,
+    pkg.estimated_timeline_max_days,
+  );
 
   return (
     <Card
-      className={cn(
-        'flex h-full flex-col transition-shadow',
-        isSelected && 'ring-2 ring-primary',
-      )}
+      className={cn('flex h-full flex-col transition-shadow', isSelected && 'ring-2 ring-primary')}
     >
       {pkg.thumbnail_url && (
         <img src={pkg.thumbnail_url} alt="" className="aspect-video w-full object-cover" />
@@ -44,7 +51,9 @@ export function PackageCard({ pkg, isSelected, onSelect }: PackageCardProps) {
         <p className="text-2xl font-bold text-foreground">
           {pkg.is_custom ? 'Custom pricing' : formatPHP(pkg.base_price)}
         </p>
-        {timeline && <p className="text-sm text-muted-foreground">Estimated timeline: {timeline}</p>}
+        {timeline && (
+          <p className="text-sm text-muted-foreground">Estimated timeline: {timeline}</p>
+        )}
 
         {pkg.pages.length > 0 && (
           <div>

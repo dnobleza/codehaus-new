@@ -98,9 +98,13 @@ export function AdminPackageFormPage() {
       isCustom: pkg.is_custom,
       basePrice: pkg.base_price ?? '',
       timelineMinWeeks:
-        pkg.estimated_timeline_min_days != null ? String(Math.round(pkg.estimated_timeline_min_days / 7)) : '',
+        pkg.estimated_timeline_min_days != null
+          ? String(Math.round(pkg.estimated_timeline_min_days / 7))
+          : '',
       timelineMaxWeeks:
-        pkg.estimated_timeline_max_days != null ? String(Math.round(pkg.estimated_timeline_max_days / 7)) : '',
+        pkg.estimated_timeline_max_days != null
+          ? String(Math.round(pkg.estimated_timeline_max_days / 7))
+          : '',
       displayOrder: String(pkg.display_order),
     });
   }, [pkg, reset]);
@@ -118,8 +122,12 @@ export function AdminPackageFormPage() {
       description: values.description,
       isCustom: values.isCustom,
       basePrice: values.isCustom ? null : Number(values.basePrice),
-      estimatedTimelineMinDays: values.timelineMinWeeks ? Number(values.timelineMinWeeks) * 7 : null,
-      estimatedTimelineMaxDays: values.timelineMaxWeeks ? Number(values.timelineMaxWeeks) * 7 : null,
+      estimatedTimelineMinDays: values.timelineMinWeeks
+        ? Number(values.timelineMinWeeks) * 7
+        : null,
+      estimatedTimelineMaxDays: values.timelineMaxWeeks
+        ? Number(values.timelineMaxWeeks) * 7
+        : null,
       displayOrder: Number(values.displayOrder),
     };
 
@@ -160,8 +168,12 @@ export function AdminPackageFormPage() {
     slug: formValues.slug ?? '',
     description: formValues.description || null,
     base_price: formValues.isCustom ? null : formValues.basePrice || null,
-    estimated_timeline_min_days: formValues.timelineMinWeeks ? Number(formValues.timelineMinWeeks) * 7 : null,
-    estimated_timeline_max_days: formValues.timelineMaxWeeks ? Number(formValues.timelineMaxWeeks) * 7 : null,
+    estimated_timeline_min_days: formValues.timelineMinWeeks
+      ? Number(formValues.timelineMinWeeks) * 7
+      : null,
+    estimated_timeline_max_days: formValues.timelineMaxWeeks
+      ? Number(formValues.timelineMaxWeeks) * 7
+      : null,
     display_order: Number(formValues.displayOrder || 0),
     is_active: pkg?.is_active ?? true,
     thumbnail_url: pkg?.thumbnail_url ?? null,
@@ -190,9 +202,17 @@ export function AdminPackageFormPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4 lg:col-span-2">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4 lg:col-span-2"
+        >
           {apiError && (
-            <Alert variant="danger" title="Couldn't save this package" description={apiError.message} />
+            <Alert
+              variant="danger"
+              title="Couldn't save this package"
+              description={apiError.message}
+            />
           )}
 
           <Card>
@@ -207,18 +227,25 @@ export function AdminPackageFormPage() {
                 error={errors.slug?.message}
                 {...register('slug')}
               />
-              <Textarea label="Description" error={errors.description?.message} {...register('description')} />
+              <Textarea
+                label="Description"
+                error={errors.description?.message}
+                {...register('description')}
+              />
 
               <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
                 <div>
                   <p className="text-sm font-medium text-foreground">Custom project package</p>
                   <p className="text-xs text-muted-foreground">
-                    No catalog price — clients requesting this package get an admin-prepared quotation instead.
+                    No catalog price — clients requesting this package get an admin-prepared
+                    quotation instead.
                   </p>
                 </div>
                 <Switch
                   checked={isCustom}
-                  onCheckedChange={(checked) => setValue('isCustom', checked, { shouldValidate: true })}
+                  onCheckedChange={(checked) =>
+                    setValue('isCustom', checked, { shouldValidate: true })
+                  }
                 />
               </div>
 
@@ -303,7 +330,9 @@ export function AdminPackageFormPage() {
                     items={pkg.pages}
                     placeholder="e.g. Home"
                     isMutating={pageMutations.add.isPending || pageMutations.remove.isPending}
-                    onAdd={(name) => pageMutations.add.mutate({ name, displayOrder: pkg.pages.length })}
+                    onAdd={(name) =>
+                      pageMutations.add.mutate({ name, displayOrder: pkg.pages.length })
+                    }
                     onRemove={(pageId) => pageMutations.remove.mutate(pageId)}
                   />
                 </CardContent>
@@ -320,7 +349,9 @@ export function AdminPackageFormPage() {
                     items={pkg.features}
                     placeholder="e.g. Contact form"
                     isMutating={featureMutations.add.isPending || featureMutations.remove.isPending}
-                    onAdd={(name) => featureMutations.add.mutate({ name, displayOrder: pkg.features.length })}
+                    onAdd={(name) =>
+                      featureMutations.add.mutate({ name, displayOrder: pkg.features.length })
+                    }
                     onRemove={(featureId) => featureMutations.remove.mutate(featureId)}
                   />
                 </CardContent>
@@ -348,12 +379,22 @@ interface ImageUploadFieldProps {
   onSelect: (file: File | undefined) => void;
 }
 
-function ImageUploadField({ label, imageUrl, inputRef, isUploading, onSelect }: ImageUploadFieldProps) {
+function ImageUploadField({
+  label,
+  imageUrl,
+  inputRef,
+  isUploading,
+  onSelect,
+}: ImageUploadFieldProps) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm font-medium text-foreground">{label}</p>
       {imageUrl ? (
-        <img src={imageUrl} alt="" className="h-32 w-full rounded-md border border-border object-cover" />
+        <img
+          src={imageUrl}
+          alt=""
+          className="h-32 w-full rounded-md border border-border object-cover"
+        />
       ) : (
         <div className="flex h-32 w-full items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
           <ImagePlus className="size-6" aria-hidden="true" />

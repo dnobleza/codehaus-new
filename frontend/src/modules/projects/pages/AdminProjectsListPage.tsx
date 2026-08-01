@@ -85,7 +85,7 @@ export function AdminProjectsListPage() {
               accessor: (row) => (
                 <Link
                   to={`${basePath}/projects/${row.id}`}
-                  className="font-medium text-foreground hover:text-primary hover:underline"
+                  className="font-medium text-foreground hover:text-primary-text hover:underline"
                 >
                   {row.title}
                 </Link>
@@ -97,7 +97,8 @@ export function AdminProjectsListPage() {
             },
             {
               header: 'Package',
-              accessor: (row) => (row.package_id ? packageNameById.get(String(row.package_id)) ?? '—' : 'Custom'),
+              accessor: (row) =>
+                row.package_id ? (packageNameById.get(String(row.package_id)) ?? '—') : 'Custom',
             },
             {
               header: 'Status',

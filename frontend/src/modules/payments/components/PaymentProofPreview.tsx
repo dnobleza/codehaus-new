@@ -51,7 +51,7 @@ export function PaymentProofPreview({ proofUrl }: PaymentProofPreviewProps) {
         href={url}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-2 border-t border-border bg-card px-3 py-2 text-sm font-medium text-primary hover:underline"
+        className="flex items-center gap-2 border-t border-border bg-card px-3 py-2 text-sm font-medium text-primary-text hover:underline"
       >
         <FileText className="size-4" aria-hidden="true" />
         Open proof of payment

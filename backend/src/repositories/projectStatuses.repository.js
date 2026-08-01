@@ -16,4 +16,16 @@ async function exists(code, db = pool) {
   return rows.length > 0;
 }
 
-module.exports = { listAll, exists };
+// Used for notification copy: the human-readable label ("In Development")
+// rather than the raw code ("in_development"). Read from the lookup table
+// rather than hardcoded in the copy builder so the wording stays correct if a
+// label is ever reworded.
+async function findByCode(code, db = pool) {
+  const { rows } = await db.query(
+    'SELECT code, label, display_order, is_terminal FROM project_statuses WHERE code = $1',
+    [code]
+  );
+  return rows[0] || null;
+}
+
+module.exports = { listAll, exists, findByCode };

@@ -8,6 +8,7 @@ import { useAuthStore } from '@/shared/store/auth.store';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 import { useSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsed';
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
+import { NotificationBell } from '@/modules/notifications/components/NotificationBell';
 import { cn } from '@/lib/utils';
 import codehausLogo from '@/assets/codehaus-logo.svg';
 import codehausIcon from '@/assets/codehaus-icon.svg';
@@ -20,10 +21,12 @@ interface DashboardShellProps {
 
 const navItemClasses = (isActive: boolean, isCollapsed: boolean) =>
   cn(
-    'flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors',
+    'flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all',
     isCollapsed && 'justify-center px-0',
     isActive
-      ? 'bg-primary/8 text-primary'
+      ? // Pressed-in clay for the active item, with the deep clay text token —
+        // `text-primary` (a fill color) would be 2.10:1 here and unreadable.
+        'bg-primary/25 text-primary-text clay-depth-press'
       : 'text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40',
   );
 
@@ -98,7 +101,8 @@ function SidebarNav({
  */
 export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const { isCollapsed: isSidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } = useSidebarCollapsed();
+  const { isCollapsed: isSidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } =
+    useSidebarCollapsed();
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
   const navigate = useNavigate();
@@ -122,10 +126,10 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
       {/*
         Faint app-wide brand accent, same visual language as the marketing
         Hero but toned down for a data-dense surface — see
-        BrandGradientAccent's "subtle" intensity. Sidebar/header/cards are all
-        opaque (bg-card) and sit on top of this via z-index, so it never
-        touches table/form/card content. Base page background stays Alice
-        Blue (--background) unchanged.
+        BrandGradientAccent's "subtle" intensity. Cards and tables inside
+        `main` stay opaque (`bg-card`) and sit above this via z-index, so it
+        never interferes with table/form content; only the sidebar and topbar
+        are translucent enough to let it through (§7.20).
       */}
       <BrandGradientAccent className="inset-0 -z-10" />
 
@@ -137,18 +141,22 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
       </a>
 
       {/* Desktop sidebar */}
+      {/*
+        Frosted chrome (design-system.md §7.20): the sidebar and topbar are
+        glass so the ambient accent reads through them, while `main`'s cards
+        and tables stay opaque `bg-card` — blur behind dense data hurts
+        legibility and costs GPU on long scrolls.
+      */}
       <aside
         className={cn(
-          'hidden shrink-0 flex-col border-r border-border bg-card transition-all duration-200 lg:flex',
+          'hidden shrink-0 flex-col border-r border-glass-border bg-glass-bg backdrop-blur-xl backdrop-saturate-150 transition-all duration-200 lg:flex',
           isSidebarCollapsed ? 'w-[68px]' : 'w-[264px]',
         )}
       >
         <div
           className={cn(
             'flex h-16 items-center border-b border-border',
-            isSidebarCollapsed
-              ? 'flex-col justify-center gap-1.5 px-2'
-              : 'justify-between px-6',
+            isSidebarCollapsed ? 'flex-col justify-center gap-1.5 px-2' : 'justify-between px-6',
           )}
         >
           {isSidebarCollapsed ? (
@@ -186,13 +194,13 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
               aria-hidden="true"
             />
             <motion.div
-              className="fixed inset-y-0 left-0 z-50 flex w-full max-w-xs flex-col bg-card lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex w-full max-w-xs flex-col bg-glass-bg backdrop-blur-xl backdrop-saturate-150 lg:hidden"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
-              <div className="flex h-16 items-center justify-between border-b border-border px-6">
+              <div className="flex h-16 items-center justify-between border-b border-glass-border px-6">
                 <img src={codehausLogo} alt="CodeHaus" className="h-16 w-auto" />
                 <button
                   type="button"
@@ -211,7 +219,7 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-glass-border bg-glass-bg px-4 backdrop-blur-xl backdrop-saturate-150 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -222,9 +230,7 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
               <Menu className="size-5" />
             </button>
             <div>
-              <p className="text-sm font-semibold text-foreground">
-                {roleLabel} dashboard
-              </p>
+              <p className="text-sm font-semibold text-foreground">{roleLabel} dashboard</p>
               {user && (
                 <p className="text-xs text-muted-foreground">
                   {user.firstName} {user.lastName}
@@ -233,14 +239,17 @@ export function DashboardShell({ navItems, roleLabel }: DashboardShellProps) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <LogOut className="size-4" aria-hidden="true" />
-            Log out
-          </button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <LogOut className="size-4" aria-hidden="true" />
+              Log out
+            </button>
+          </div>
         </header>
 
         <main id="dashboard-main-content" className="flex-1 px-4 py-8 sm:px-6 lg:px-8 lg:py-8">

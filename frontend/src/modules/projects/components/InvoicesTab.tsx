@@ -1,42 +1,42 @@
+import { Link } from 'react-router-dom';
+
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { buttonVariants } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
-import { formatPHP, toNumber } from '@/shared/utils/currency';
-import { formatTimelineRange } from '@/shared/utils/timeline';
-import type { ApiError } from '@/shared/api/apiClient';
+import { formatPHP } from '@/shared/utils/currency';
 import { useProject } from '../api/projects.queries';
 import { ProjectStatusStepper } from './ProjectStatusStepper';
-import {
-  useAcceptQuotation,
-  useRejectQuotation,
-} from '@/modules/quotations/api/quotations.queries';
-import { QuotationSummaryCard } from '@/modules/quotations/components/QuotationSummaryCard';
 import { useProjectPayments } from '@/modules/payments/api/payments.queries';
-import { PaymentForm } from '@/modules/payments/components/PaymentForm';
-import { PaymentReceiptCard } from '@/modules/payments/components/PaymentReceiptCard';
 
 interface InvoicesTabProps {
   projectId: string;
 }
 
 /**
- * Invoices tab: the project's quotation-review + proof-of-payment flow.
- * This is a straight extraction of what used to be the entire
- * `ProjectDetailPage` body (status stepper, quotation accept/reject,
- * payment schedule, payment method + proof-of-payment submission, polling
- * for admin-driven transitions) — behavior is unchanged, it just now lives
- * behind the Invoices tab instead of being the whole page. Self-contained
- * (fetches its own data via `projectId`) so Base UI's Tabs only mounts it
- * — and only fires its queries — once the client actually opens this tab.
+ * Invoices tab: the project's proof-of-payment flow — status stepper,
+ * payment-status alerts, and the payment method + proof-of-payment form.
+ *
+ * Two surfaces deliberately do NOT live here, and this tab links out to both
+ * rather than duplicating them:
+ *
+ * - Quotation review (itemized cost breakdown, payment schedule, and the
+ *   accept/request-changes decision) lives in the Quotations section
+ *   (`modules/quotations/pages/QuotationDetailPage`), so the client sees the
+ *   full cost and payment commitment in one place before accepting.
+ * - Payment receipts live in the Invoices section
+ *   (`modules/payments/pages/InvoicesPage`), which covers every project at
+ *   once rather than making the client open each project to see what they
+ *   have paid.
+ *
+ * Self-contained (fetches its own data via `projectId`) so Base UI's Tabs
+ * only mounts it — and only fires its queries — once the client actually
+ * opens this tab.
  */
 export function InvoicesTab({ projectId }: InvoicesTabProps) {
   const { data: project, isLoading, isError, refetch } = useProject(projectId);
   const { data: payments } = useProjectPayments(projectId);
-
-  const acceptQuotation = useAcceptQuotation(projectId);
-  const rejectQuotation = useRejectQuotation(projectId);
 
   if (isLoading) {
     return <LoadingSpinner label="Loading invoices..." />;
@@ -52,12 +52,8 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
   }
 
   const latestQuotation = project.quotations?.[0];
-  const quotationError = (acceptQuotation.error ?? rejectQuotation.error) as ApiError | null;
 
   const latestPayment = payments?.[0];
-  // Sequence-ordered by the API, so `.find` naturally returns the
-  // lowest-sequence pending row — the same installment the server resolves
-  // "the next pending installment" to when validating a payment submission.
   const nextPendingInstallment = project.paymentInstallments?.find(
     (installment) => installment.status === 'pending',
   );
@@ -65,10 +61,11 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
   const remainingInstallmentCount =
     project.paymentInstallments?.filter((installment) => installment.status === 'pending').length ??
     0;
-  const canSubmitPayment =
-    latestQuotation?.status === 'accepted' &&
-    Boolean(nextPendingInstallment) &&
-    (!latestPayment || latestPayment.status !== 'verification');
+  // Submitting happens in the Payments section now; this tab only says whether
+  // something is owed and points there. The rule for whether a submission is
+  // actually allowed (accepted quotation, pending installment, nothing already
+  // under verification) lives server-side in `GET /payments/due`.
+  const hasAmountDue = latestQuotation?.status === 'accepted' && Boolean(nextPendingInstallment);
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,10 +96,6 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
         />
       )}
 
-      {quotationError && (
-        <Alert variant="danger" title="Something went wrong" description={quotationError.message} />
-      )}
-
       {latestQuotation && latestQuotation.status === 'draft' && (
         <Alert
           variant="info"
@@ -112,37 +105,20 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
       )}
 
       {latestQuotation && latestQuotation.status === 'sent' && (
-        <QuotationSummaryCard
-          quotationNumber={latestQuotation.quotation_number}
-          packageLabel={project.title}
-          basePrice={toNumber(latestQuotation.base_price)}
-          addonLines={(latestQuotation.addons ?? []).map((addon) => ({
-            label: addon.name,
-            amount: addon.priceAtTime,
-          }))}
-          total={toNumber(latestQuotation.total_amount)}
-          timelineLabel={formatTimelineRange(
-            latestQuotation.estimated_timeline_min_days,
-            latestQuotation.estimated_timeline_max_days,
-          )}
-          footer={
-            <>
-              <Button
-                variant="outline"
-                onClick={() => rejectQuotation.mutate(latestQuotation.id)}
-                disabled={acceptQuotation.isPending || rejectQuotation.isPending}
-              >
-                Request Changes
-              </Button>
-              <Button
-                onClick={() => acceptQuotation.mutate(latestQuotation.id)}
-                disabled={acceptQuotation.isPending || rejectQuotation.isPending}
-              >
-                {acceptQuotation.isPending ? 'Accepting...' : 'Accept Quotation'}
-              </Button>
-            </>
-          }
-        />
+        <div className="flex flex-col items-start gap-3">
+          <Alert
+            className="w-full"
+            variant="info"
+            title="You have a quotation to review"
+            description="Your cost breakdown and payment schedule are in the Quotations section."
+          />
+          <Link
+            to={`/client/dashboard/quotations/${project.id}/${latestQuotation.id}`}
+            className={buttonVariants({ size: 'sm' })}
+          >
+            Review your quotation
+          </Link>
+        </div>
       )}
 
       {latestQuotation && latestQuotation.status === 'rejected' && (
@@ -178,33 +154,44 @@ export function InvoicesTab({ projectId }: InvoicesTabProps) {
           <Alert
             variant="info"
             title="Downpayment received"
-            description={`${remainingInstallmentCount} installment${remainingInstallmentCount === 1 ? '' : 's'} remaining. You can submit your next payment below.`}
+            description={`${remainingInstallmentCount} installment${remainingInstallmentCount === 1 ? '' : 's'} remaining.`}
           />
         ) : null)}
 
-      <PaymentReceiptCard project={project} quotation={latestQuotation} payment={latestPayment} />
+      {latestPayment?.status === 'rejected' && (
+        <Alert
+          variant="danger"
+          title="Your previous payment wasn't verified"
+          description="Please double-check your details and resubmit proof of payment from the Payments section."
+        />
+      )}
 
-      {canSubmitPayment && nextPendingInstallment && (
-        <Card className="mx-auto w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Select a payment method</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {latestPayment?.status === 'rejected' && (
-              <Alert
-                className="mb-4"
-                variant="danger"
-                title="Your previous payment wasn't verified"
-                description="Please double-check your details and resubmit proof of payment."
-              />
-            )}
-            <PaymentForm
-              key={nextPendingInstallment.id}
-              projectId={project.id}
-              installment={nextPendingInstallment}
-            />
-          </CardContent>
-        </Card>
+      {hasAmountDue && nextPendingInstallment && (
+        <div className="flex flex-col items-start gap-3">
+          <Alert
+            className="w-full"
+            variant="info"
+            title={`${formatPHP(nextPendingInstallment.amount)} due on this project`}
+            description="Submit your payment and upload proof from the Payments section."
+          />
+          <Link to="/client/dashboard/payments" className={buttonVariants({ size: 'sm' })}>
+            Go to Payments
+          </Link>
+        </div>
+      )}
+
+      {latestPayment && (
+        <div className="flex flex-col items-start gap-3">
+          <Alert
+            className="w-full"
+            variant="info"
+            title="Your receipts are in the Invoices section"
+            description="Every payment you've made, with what's verified and what's still outstanding."
+          />
+          <Link to="/client/dashboard/invoices" className={buttonVariants({ size: 'sm' })}>
+            View payment receipts
+          </Link>
+        </div>
       )}
 
       {project.status_code === 'accepted' && !latestPayment && isFullyPaid && (

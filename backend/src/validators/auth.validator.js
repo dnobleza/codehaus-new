@@ -9,6 +9,18 @@ function sanitizedString(min, max) {
     .pipe(z.string().min(min).max(max));
 }
 
+// Same as sanitizedString(...).optional(), but also accepts an explicit
+// empty string (e.g. a client that sends `contactNo: ''` instead of omitting
+// the key) and normalizes it to `undefined`, so callers downstream (e.g.
+// auth.service.js's `contactNo ?? null`) keep treating "not provided" and
+// "provided as empty" identically without needing their own changes.
+function optionalSanitizedString(min, max) {
+  return sanitizedString(min, max)
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' ? undefined : val));
+}
+
 const registerSchema = z.object({
   firstName: sanitizedString(1, 100),
   middleName: sanitizedString(1, 100),
@@ -21,8 +33,8 @@ const registerSchema = z.object({
     .regex(/[a-z]/, 'Password must contain a lowercase letter')
     .regex(/[A-Z]/, 'Password must contain an uppercase letter')
     .regex(/[0-9]/, 'Password must contain a digit'),
-  contactNo: sanitizedString(1, 30).optional(),
-  address: sanitizedString(1, 500).optional(),
+  contactNo: optionalSanitizedString(1, 30),
+  address: optionalSanitizedString(1, 500),
 });
 
 const loginSchema = z.object({

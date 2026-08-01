@@ -4,24 +4,21 @@ import { AlertCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-const alertVariants = cva(
-  'flex w-full items-start gap-3 rounded-md border px-4 py-3 text-sm',
-  {
-    variants: {
-      variant: {
-        neutral: 'border-border/60 bg-muted text-foreground',
-        primary: 'border-primary/30 bg-primary/8 text-primary',
-        success: 'border-success/30 bg-success/8 text-success',
-        warning: 'border-warning/30 bg-warning/15 text-warning-foreground-on-light',
-        danger: 'border-destructive/30 bg-destructive/8 text-destructive',
-        info: 'border-info/30 bg-info/8 text-info-foreground-on-light',
-      },
-    },
-    defaultVariants: {
-      variant: 'neutral',
+const alertVariants = cva('flex w-full items-start gap-3 rounded-md border px-4 py-3 text-sm', {
+  variants: {
+    variant: {
+      neutral: 'border-border/60 bg-muted text-foreground',
+      primary: 'border-primary/30 bg-primary/8 text-primary-text',
+      success: 'border-success/30 bg-success/8 text-success',
+      warning: 'border-warning/30 bg-warning/15 text-warning-foreground-on-light',
+      danger: 'border-destructive/30 bg-destructive/8 text-destructive',
+      info: 'border-info/30 bg-info/8 text-info-foreground-on-light',
     },
   },
-);
+  defaultVariants: {
+    variant: 'neutral',
+  },
+});
 
 const ICONS = {
   neutral: Info,
@@ -33,8 +30,7 @@ const ICONS = {
 } as const;
 
 export interface AlertProps
-  extends React.ComponentProps<'div'>,
-    VariantProps<typeof alertVariants> {
+  extends React.ComponentProps<'div'>, VariantProps<typeof alertVariants> {
   title: string;
   description?: string;
 }
