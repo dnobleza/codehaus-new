@@ -1,11 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowRight, Mail } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import type { ApiError } from '@/shared/api/apiClient';
 import { dashboardPathForRole } from '@/shared/constants/roles';
 import { useLoginMutation } from '../api/auth.mutations';
@@ -41,7 +43,7 @@ export function LoginPage() {
   return (
     <>
       <CardHeader>
-        <CardTitle className="text-xl font-bold">Log in to CodeHaus</CardTitle>
+        <CardTitle className="text-2xl font-bold">Log in to CodeHaus</CardTitle>
         <CardDescription>Welcome back — enter your details to continue.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -62,20 +64,36 @@ export function LoginPage() {
           <Input
             label="Email"
             type="email"
+            inputSize="xl"
+            tone="cool"
+            placeholder="example@email.com"
+            startIcon={<Mail />}
             autoComplete="email"
             error={errors.email?.message}
             {...register('email')}
           />
-          <Input
+          <PasswordInput
             label="Password"
-            type="password"
+            inputSize="xl"
+            tone="cool"
+            placeholder="••••••••••••"
             autoComplete="current-password"
             error={errors.password?.message}
             {...register('password')}
           />
 
-          <Button type="submit" size="lg" className="w-full" disabled={loginMutation.isPending}>
-            {loginMutation.isPending ? 'Logging in...' : 'Log in'}
+          <Button
+            type="submit"
+            size="lg"
+            className="mt-2 h-11 w-full justify-between px-4 text-base"
+            disabled={loginMutation.isPending}
+          >
+            {/* Balances the trailing arrow so the label stays optically centred. */}
+            <span aria-hidden="true" className="size-4" />
+            <span className="flex-1 text-center">
+              {loginMutation.isPending ? 'Logging in...' : 'Log in'}
+            </span>
+            <ArrowRight aria-hidden="true" />
           </Button>
         </form>
 

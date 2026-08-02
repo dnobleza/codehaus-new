@@ -172,7 +172,7 @@
   html {
     scroll-behavior: smooth;
     /*
-      The landing page's sticky header is 65px tall (`h-16` plus its 1px
+      The landing page's fixed header is 65px tall (`h-16` plus its 1px
       bottom border), so every in-page anchor must stop short of that or the
       target heading lands underneath it. 5rem clears the bar and leaves ~15px
       of air, which reads better than landing flush against it. Set on `html`
