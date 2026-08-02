@@ -3,7 +3,11 @@ import { Outlet } from 'react-router-dom';
 import { Footer } from '@/modules/marketing/components/Footer';
 import { Navbar } from '@/modules/marketing/components/Navbar';
 
-/** Public marketing shell: sticky header nav + footer, no sidebar. */
+/**
+ * Public marketing shell: fixed header nav + footer, no sidebar. The header
+ * is `fixed` (see Navbar.tsx) so it overlays the Hero rather than occupying
+ * its own row here — `main` starts at the very top of the page.
+ */
 export function LandingLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-background font-poppins">

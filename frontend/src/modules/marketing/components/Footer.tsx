@@ -1,4 +1,4 @@
-import codehausLogo from '@/assets/codehaus-logo.svg';
+import codehausLogo from '@/assets/navbar.png';
 import { BrandGradientAccent } from '@/shared/components/common/BrandGradientAccent';
 import { NAV_ITEMS } from '../constants';
 import { Container } from './Container';
@@ -19,7 +19,7 @@ export function Footer() {
       <div className="bg-glass-bg backdrop-blur-xl backdrop-saturate-150">
         <Container className="flex flex-col gap-8 py-12 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <img src={codehausLogo} alt="CodeHaus" className="h-14 w-auto" />
+            <img src={codehausLogo} alt="CodeHaus" className="h-20 w-auto" />
             <p className="mt-2 max-w-xs text-sm text-muted-foreground">
               The project delivery and billing workspace for software agencies.
             </p>

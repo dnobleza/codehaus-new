@@ -5,7 +5,9 @@ import { Menu, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
-import codehausLogo from '@/assets/codehaus-logo.svg';
+import { useScrolled } from '@/shared/hooks/useScrolled';
+import { cn } from '@/lib/utils';
+import navbarLogo from '@/assets/navbar.png';
 import { NAV_ITEMS } from '../constants';
 import { Container } from './Container';
 
@@ -14,6 +16,13 @@ export function Navbar() {
   const navigate = useNavigate();
   const toggleRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
+  // Transparent at the top of the page (over the Hero's own light gradient
+  // panel, where `text-muted-foreground`/`text-foreground` already clear
+  // AA against the cream background) and switching to the existing frosted
+  // treatment once scrolled — every other section (Services cards, the
+  // Pricing band, dark panels) needs the opaque backdrop for nav-link
+  // contrast. See design-system.md §7.2.
+  const isScrolled = useScrolled();
 
   useEscapeKey(isOpen, () => setIsOpen(false));
 
@@ -49,14 +58,40 @@ export function Navbar() {
     // scrolls beneath it, with a warm clay hairline instead of a blue one. The
     // rounded `--radius-clay` treatment is deliberately NOT applied here — a
     // full-bleed sticky bar reads better with square edges.
-    <header className="sticky top-0 z-50 border-b border-glass-border bg-glass-bg shadow-[0_1px_0_0_rgba(100,80,60,0.06)] backdrop-blur-xl backdrop-saturate-150">
+    //
+    // `fixed` (not `sticky`): a sticky header still reserves its own row in
+    // normal flow, which pushed the Hero (and its gradient wash) down by the
+    // header's own height — a flat `bg-background` strip showed through the
+    // transparent header instead of the Hero's gradient. `fixed` removes the
+    // header from flow entirely so the Hero starts at the very top of the
+    // page and its `BrandGradientAccent` runs continuously behind the
+    // transparent header. `inset-x-0` replaces the full-width stretch a flex
+    // child gets for free, since a fixed element no longer participates in
+    // `LandingLayout`'s flex column.
+    //
+    // Transparent-at-top: fully transparent (no fill, no border, no blur)
+    // only while `!isScrolled`, i.e. only while positioned over the Hero's
+    // own light background. The instant the page scrolls past `threshold`
+    // this reverts to the original frosted/solid bar so nav links stay
+    // readable over every other section. `transition-colors` covers the
+    // background/border swap; backdrop-blur itself cannot be transitioned
+    // so it's simply toggled off/on at the same instant, which reads as
+    // part of the same fade rather than a separate snap.
+    <header
+      className={cn(
+        'fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300',
+        isScrolled
+          ? 'border-glass-border bg-glass-bg shadow-[0_1px_0_0_rgba(100,80,60,0.06)] backdrop-blur-xl backdrop-saturate-150'
+          : 'border-transparent bg-transparent shadow-none',
+      )}
+    >
       <Container as="nav" aria-label="Primary" className="flex h-16 items-center justify-between">
         <a href="#home" className="flex items-center">
-          {/* 56px: fills the 64px bar with an even ~4px margin top and
-              bottom. Smaller (h-10/h-12) reads too light against the nav
-              links and the clay CTA; this size holds its own without
-              touching the border. */}
-          <img src={codehausLogo} alt="CodeHaus" className="h-14 w-auto" />
+          {/* 56px tall, matching the previous logo's footprint so the bar
+              keeps its established 64px rhythm. `navbar.png`'s intrinsic
+              1536x1024 (3:2) is declared via width/height to reserve layout
+              space; CSS then scales it down to the rendered size. */}
+          <img src={navbarLogo} alt="CodeHaus" width={1536} height={1024} className="h-28 w-auto" />
         </a>
 
         <ul className="hidden items-center gap-8 lg:flex">
