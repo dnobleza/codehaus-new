@@ -79,6 +79,18 @@ router.patch(
 // --- Delivery execution: staff's own surface --------------------------------
 // requireAssignedOrAdmin confines staff to the projects they're assigned to;
 // admin remains unrestricted.
+//
+// The read below is what makes the two writes usable at all. Milestones were
+// previously readable only through GET /projects/:id/overview, which is gated
+// to role CLIENT -- so the PATCH took a `:milestoneId` that neither admin nor
+// staff had any way to obtain. Same guards as the writes, so read and write
+// cover exactly the same set of projects.
+router.get(
+  '/:id/milestones',
+  requireDeliveryAccess,
+  requireAssignedOrAdmin,
+  adminProjectsController.listMilestones,
+);
 router.patch(
   '/:id/milestones/:milestoneId',
   requireDeliveryAccess,

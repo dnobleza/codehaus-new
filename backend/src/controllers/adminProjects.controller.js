@@ -117,6 +117,20 @@ exports.editDraftQuotation = async (req, res, next) => {
   }
 };
 
+exports.listMilestones = async (req, res, next) => {
+  try {
+    const overview = await projectOverviewService.listMilestonesForProject(req.params.id);
+    logger.info(
+      `${TAG} Listed ${overview.milestones.length} milestones for project ${req.params.id}`
+    );
+    res
+      .status(200)
+      .json({ success: true, message: 'Milestones retrieved successfully', data: overview });
+  } catch (error) {
+    next(toHttpError(error));
+  }
+};
+
 exports.updateMilestoneProgress = async (req, res, next) => {
   try {
     const data = updateMilestoneProgressSchema.parse(req.body);

@@ -90,7 +90,10 @@ const CASES = [
   ['patch', `/admin/projects/${ID}/quotations/${ID}`,   'A', 'D', 'D'],
   ['patch', `/admin/projects/${ID}/quotations/${ID}/send`, 'A', 'D', 'D'],
 
-  // Delivery execution: staff's own surface.
+  // Delivery execution: staff's own surface. The GET is what makes the two
+  // writes reachable -- without it neither admin nor staff can discover a
+  // milestone id, since the only other milestone read is client-gated.
+  ['get',   `/admin/projects/${ID}/milestones`,         'A', 'A', 'D'],
   ['patch', `/admin/projects/${ID}/milestones/${ID}`,   'A', 'A', 'D'],
   ['post',  `/admin/projects/${ID}/milestones/generate`, 'A', 'A', 'D'],
 

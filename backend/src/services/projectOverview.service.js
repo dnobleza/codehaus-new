@@ -257,9 +257,43 @@ async function updateMilestoneProgress(projectId, milestoneId, { progressPercent
   }
 }
 
+/*
+  Delivery-side milestone read (GET /admin/projects/:id/milestones).
+
+  This exists because admin and staff could already WRITE milestones --
+  adminProjects.route.js grants both `PATCH /:id/milestones/:milestoneId` and
+  `POST /:id/milestones/generate` -- while the only endpoint that returned
+  milestone rows was `GET /projects/:id/overview`, hard-gated to role CLIENT in
+  projects.route.js. The update endpoint takes a `:milestoneId` that its own
+  callers had no way to discover, so the capability was unreachable in
+  practice.
+
+  Deliberately narrower than getOverviewForClient: milestones only, no activity
+  feed and no computed completion estimate. Staff updating progress needs the
+  rows and their ids; the client-facing progress narrative is a different
+  concern with a different audience.
+
+  Authorization is the route's job -- requireRole('admin','staff') plus
+  requireAssignedOrAdmin, matching the sibling milestone routes exactly, so
+  staff reaches milestones on precisely the projects it can already update.
+*/
+async function listMilestonesForProject(projectId) {
+  const project = await projectsRepo.findById(projectId);
+  if (!project) throw httpError(404, 'Project not found');
+
+  const milestones = await milestonesRepo.listByProject(projectId);
+
+  return {
+    project: presentProject(project),
+    overallProgressPercent: computeOverallProgress(milestones),
+    milestones: milestones.map(presentMilestone),
+  };
+}
+
 module.exports = {
   getOverviewForClient,
   getActivityForClient,
+  listMilestonesForProject,
   generateMilestoneTemplate,
   generateMilestoneTemplateAdmin,
   updateMilestoneProgress,
