@@ -58,6 +58,18 @@ export interface Project {
   completion_date: string | null;
   created_at: string;
   updated_at: string;
+  /**
+   * Client identity, joined in on the admin/staff reads only
+   * (`projects.repository.js`'s PROJECT_WITH_CLIENT_SELECT). Absent on the
+   * client's own `GET /projects` — a client already knows who they are.
+   *
+   * Nullable because the join is a LEFT JOIN: a project whose client row is
+   * missing still appears in an admin list rather than vanishing from it.
+   * Render through `clientName()` rather than assuming a value.
+   */
+  client_first_name?: string | null;
+  client_last_name?: string | null;
+  client_email?: string | null;
   quotations?: Quotation[];
   /**
    * Only present when fetched via `GET /projects/:id` or

@@ -3,6 +3,36 @@ const pool = require('../config/database');
 // Raw, parameterized `pg` queries only -- no business logic (see
 // services/projects.service.js).
 
+/*
+  Every admin/staff-facing read carries the client's identity.
+
+  Without it the elevated surfaces could only render `Client #12` and raw
+  project UUIDs, which meant an admin working the payment verification queue
+  was approving money without being able to tell whose it was. Payment
+  verification is admin-only specifically for segregation of duties; that
+  control is worth little if the person exercising it cannot see the
+  counterparty.
+
+  Identity lives across two tables -- `users` holds the credential and role,
+  `registration` holds the person -- joined on `registration_uuid`, the same
+  shape auth.service.js and users.repository.js already use.
+
+  Both joins are LEFT: a project whose client row is missing or malformed must
+  still appear in an admin list with a blank name, never silently vanish from
+  it. An inner join here would turn a data problem into an invisible project.
+
+  Client-facing reads (listByClient, findByIdForClient) deliberately skip this
+  -- a client already knows who they are, and the columns would be dead weight.
+*/
+const PROJECT_WITH_CLIENT_SELECT = `
+  SELECT p.*,
+         r.first_name AS client_first_name,
+         r.last_name  AS client_last_name,
+         r.email      AS client_email
+  FROM projects p
+  LEFT JOIN users u ON u.user_id = p.client_id
+  LEFT JOIN registration r ON r.registration_uuid = u.registration_uuid`;
+
 async function create({ clientId, packageId, title, requestDetails, referenceCode }, db = pool) {
   const { rows } = await db.query(
     `INSERT INTO projects (client_id, package_id, title, request_details, reference_code)
@@ -12,8 +42,11 @@ async function create({ clientId, packageId, title, requestDetails, referenceCod
   return rows[0];
 }
 
+// Carries the client join: this backs the admin/staff project detail page as
+// well as every internal existence check. The extra columns are additive, so
+// internal callers that only read `p.*` fields are unaffected.
 async function findById(id, db = pool) {
-  const { rows } = await db.query('SELECT * FROM projects WHERE id = $1', [id]);
+  const { rows } = await db.query(`${PROJECT_WITH_CLIENT_SELECT} WHERE p.id = $1`, [id]);
   return rows[0] || null;
 }
 
@@ -38,9 +71,12 @@ async function listAll({ statusCode } = {}, db = pool) {
   let where = '1=1';
   if (statusCode) {
     values.push(statusCode);
-    where += ` AND status_code = $${values.length}`;
+    where += ` AND p.status_code = $${values.length}`;
   }
-  const { rows } = await db.query(`SELECT * FROM projects WHERE ${where} ORDER BY created_at DESC`, values);
+  const { rows } = await db.query(
+    `${PROJECT_WITH_CLIENT_SELECT} WHERE ${where} ORDER BY p.created_at DESC`,
+    values
+  );
   return rows;
 }
 
@@ -58,7 +94,7 @@ async function listAssignedTo(userId, { statusCode } = {}, db = pool) {
     where += ` AND p.status_code = $${values.length}`;
   }
   const { rows } = await db.query(
-    `SELECT p.* FROM projects p
+    `${PROJECT_WITH_CLIENT_SELECT}
      JOIN project_assignments pa ON pa.project_id = p.id
      WHERE ${where}
      ORDER BY p.created_at DESC`,

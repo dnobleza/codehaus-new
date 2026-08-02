@@ -18,6 +18,7 @@ import { formatPHP } from '@/shared/utils/currency';
 import { useCan } from '@/shared/auth/useCan';
 import type { ApiError } from '@/shared/api/apiClient';
 import type { Payment, PaymentStatus } from '@/shared/types/payment.types';
+import { paymentClientName, projectLabel } from '@/shared/utils/people';
 import { PaymentProofPreview } from '../components/PaymentProofPreview';
 import { useAdminPayments, useRejectPayment, useVerifyPayment } from '../api/payments.queries';
 
@@ -105,7 +106,14 @@ export function AdminPaymentsQueuePage() {
       {!isLoading && !isError && (
         <DataTable
           columns={[
-            { header: 'Project', accessor: (row) => row.project_id },
+            { header: 'Project', accessor: (row) => projectLabel(row) },
+            // Whose money this is. Verifying a payment is an attestation that
+            // funds landed; doing that against a bare UUID is guesswork.
+            { header: 'Client', accessor: (row) => paymentClientName(row) },
+            {
+              header: 'Installment',
+              accessor: (row) => (row.installment_sequence ? `${row.installment_sequence} of 5` : '—'),
+            },
             { header: 'Method', accessor: (row) => row.payment_method },
             { header: 'Amount', accessor: (row) => formatPHP(row.amount) },
             { header: 'Reference', accessor: (row) => row.reference_number ?? '—' },

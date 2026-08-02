@@ -10,6 +10,7 @@ import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
 import { useAuthStore } from '@/shared/store/auth.store';
 import { formatPHP, toNumber } from '@/shared/utils/currency';
+import { projectLabel } from '@/shared/utils/people';
 import { useAdminProjects } from '@/modules/projects/api/projects.queries';
 import { useAdminPayments } from '@/modules/payments/api/payments.queries';
 
@@ -143,7 +144,7 @@ export function DashboardPage() {
             ) : (
               <DataTable
                 columns={[
-                  { header: 'Project', accessor: (row) => row.project_id },
+                  { header: 'Project', accessor: (row) => projectLabel(row) },
                   { header: 'Amount', accessor: (row) => formatPHP(row.amount) },
                   { header: 'Method', accessor: (row) => row.payment_method },
                   {

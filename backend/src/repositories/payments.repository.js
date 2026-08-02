@@ -38,14 +38,43 @@ async function listByProject(projectId, db = pool) {
   return rows;
 }
 
+/*
+  The verification queue's rows carry the project and client they belong to.
+
+  Without this the queue could only show a payment's own columns, so an admin
+  saw a bare `project_id` UUID and an amount and had to approve money without
+  knowing whose it was or which installment it settled. `installment_sequence`
+  comes along for the same reason -- "installment 2 of 5" is what makes an
+  expected amount checkable against a bank slip.
+
+  All joins are LEFT: `installment_id` is nullable (payments predating
+  019_add_payment_installment_id.sql), and a payment must never disappear from
+  the verification queue because a joined row is missing.
+*/
+const PAYMENT_WITH_CONTEXT_SELECT = `
+  SELECT p.*,
+         pr.title          AS project_title,
+         pr.reference_code AS project_reference_code,
+         r.first_name      AS client_first_name,
+         r.last_name       AS client_last_name,
+         pi.sequence       AS installment_sequence
+  FROM payments p
+  LEFT JOIN projects pr ON pr.id = p.project_id
+  LEFT JOIN users u ON u.user_id = pr.client_id
+  LEFT JOIN registration r ON r.registration_uuid = u.registration_uuid
+  LEFT JOIN payment_installments pi ON pi.id = p.installment_id`;
+
 async function listAll({ status } = {}, db = pool) {
   const values = [];
   let where = '1=1';
   if (status) {
     values.push(status);
-    where += ` AND status = $${values.length}`;
+    where += ` AND p.status = $${values.length}`;
   }
-  const { rows } = await db.query(`SELECT * FROM payments WHERE ${where} ORDER BY created_at DESC`, values);
+  const { rows } = await db.query(
+    `${PAYMENT_WITH_CONTEXT_SELECT} WHERE ${where} ORDER BY p.created_at DESC`,
+    values
+  );
   return rows;
 }
 
@@ -64,7 +93,7 @@ async function listAssignedTo(userId, { status } = {}, db = pool) {
     where += ` AND p.status = $${values.length}`;
   }
   const { rows } = await db.query(
-    `SELECT p.* FROM payments p
+    `${PAYMENT_WITH_CONTEXT_SELECT}
      JOIN project_assignments pa ON pa.project_id = p.project_id
      WHERE ${where}
      ORDER BY p.created_at DESC`,
