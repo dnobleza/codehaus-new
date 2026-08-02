@@ -36,6 +36,10 @@ const EXPECTATIONS: Record<Capability, Record<Role, boolean>> = {
   'project.deliver': { admin: true, staff: false, client: false },
   'project.setDeliveryStatus': { admin: true, staff: true, client: false },
   'project.setCommercialStatus': { admin: true, staff: false, client: false },
+  // Staffing a project is an admin decision; reading the roster of a project
+  // you are already on is not.
+  'project.assign': { admin: true, staff: false, client: false },
+  'project.viewTeam': { admin: true, staff: true, client: false },
   'quotation.create': { admin: true, staff: false, client: false },
   'quotation.edit': { admin: true, staff: false, client: false },
   'quotation.send': { admin: true, staff: false, client: false },

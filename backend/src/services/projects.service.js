@@ -7,6 +7,7 @@ const projectStatusesRepo = require('../repositories/projectStatuses.repository'
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
 const projectOverviewService = require('./projectOverview.service');
 const notificationsService = require('./notifications.service');
+const usersService = require('./users.service');
 const { ROLES, STAFF_ASSIGNABLE_STATUSES } = require('../constants/roles');
 const logger = require('../utils/logger');
 const TAG = '[PROJECTS-SERVICE]';
@@ -271,6 +272,11 @@ async function markProjectDeliveredAdmin(id) {
 async function assignUserToProject(projectId, userId, assignedByUserId) {
   const project = await projectsRepo.findById(projectId);
   if (!project) throw httpError(404, 'Project not found');
+
+  // Existence, active state, and role are all checked up front now that a
+  // users repository exists. The FK-violation fallback below stays as a
+  // backstop for the race where the user is deleted between these two steps.
+  await usersService.assertAssignable(userId);
 
   try {
     const assignment = await projectAssignmentsRepo.assign({

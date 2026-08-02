@@ -33,6 +33,7 @@ import {
 } from '../api/projects.queries';
 import { AdminQuotationBuilder } from '../components/AdminQuotationBuilder';
 import { ProjectStatusStepper } from '../components/ProjectStatusStepper';
+import { ProjectTeamPanel } from '../components/ProjectTeamPanel';
 import { PROJECT_STATUS_LABELS, getSelectableNextStatuses } from '../utils/projectStatus';
 
 const QUOTATION_STATUS_BADGE = {
@@ -223,6 +224,11 @@ export function AdminProjectDetailPage() {
           <ProjectStatusStepper status={project.status_code} />
         </CardContent>
       </Card>
+
+      {/* Delivery team. Sits high on the page because assignment is what makes
+          a project visible to staff at all — an unassigned project is invisible
+          to everyone but admin. Renders nothing for clients. */}
+      <ProjectTeamPanel projectId={project.id} />
 
       {isSubmitted && !canReviewRequest && (
         <Alert

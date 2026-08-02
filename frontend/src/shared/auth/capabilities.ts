@@ -18,6 +18,8 @@ export type Capability =
   | 'project.deliver'
   | 'project.setDeliveryStatus'
   | 'project.setCommercialStatus'
+  | 'project.assign'
+  | 'project.viewTeam'
   | 'quotation.create'
   | 'quotation.edit'
   | 'quotation.send'
@@ -47,6 +49,12 @@ const CAPABILITY_ROLES: Record<Capability, readonly Role[]> = {
   'project.deliver': [ROLES.ADMIN],
   'project.setDeliveryStatus': [ROLES.ADMIN, ROLES.STAFF],
   'project.setCommercialStatus': [ROLES.ADMIN],
+  // Who is on a delivery team is a staffing decision, so only admin changes
+  // it (adminProjects.route.js gates both assignment writes with requireAdmin).
+  'project.assign': [ROLES.ADMIN],
+  // Staff sees the roster of a project it is already on — useful for knowing
+  // who else is working the job. The endpoint is assignment-gated server-side.
+  'project.viewTeam': [ROLES.ADMIN, ROLES.STAFF],
   'quotation.create': [ROLES.ADMIN],
   'quotation.edit': [ROLES.ADMIN],
   'quotation.send': [ROLES.ADMIN],
