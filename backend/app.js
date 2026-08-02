@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const logger = require('./src/utils/logger');
+const config = require('./src/config/env');
 const TAG = '[APP]';
 
 const healthRoutes = require('./src/routes/health.route');
@@ -18,6 +19,7 @@ const adminPackagesRoutes = require('./src/routes/adminPackages.route');
 const adminAddonsRoutes = require('./src/routes/adminAddons.route');
 const adminProjectsRoutes = require('./src/routes/adminProjects.route');
 const adminPaymentsRoutes = require('./src/routes/adminPayments.route');
+const adminUsersRoutes = require('./src/routes/adminUsers.route');
 const errorHandler = require('./src/middleware/errorhandler.middleware');
 
 const app = express();
@@ -30,7 +32,7 @@ const app = express();
 // this if the app is ever deployed behind more than one reverse-proxy layer.
 app.set('trust proxy', 1);
 
-const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').filter(Boolean);
+const allowedOrigins = config.corsOrigin.split(',').filter(Boolean);
 
 app.use(helmet());
 app.use(
@@ -65,6 +67,7 @@ app.use('/admin/packages', adminPackagesRoutes);
 app.use('/admin/addons', adminAddonsRoutes);
 app.use('/admin/projects', adminProjectsRoutes);
 app.use('/admin/payments', adminPaymentsRoutes);
+app.use('/admin/users', adminUsersRoutes);
 app.use(errorHandler);
 
 module.exports = app;

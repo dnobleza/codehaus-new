@@ -37,6 +37,16 @@ export const queryKeys = {
     adminList: (filters?: unknown) =>
       [...queryKeys.projects.adminAll(), 'list', filters ?? {}] as const,
     adminDetail: (id: string) => [...queryKeys.projects.adminAll(), 'detail', id] as const,
+    // A project's delivery team (GET /admin/projects/:id/assignments). Nested
+    // under the project because assignments have no life of their own — they
+    // are invalidated whenever the project's team changes, never separately.
+    assignments: (id: string) => [...queryKeys.projects.adminAll(), 'assignments', id] as const,
+  },
+  users: {
+    all: ['users'] as const,
+    // Staff/admin eligible for a project team (GET /admin/users/assignable).
+    // Deliberately not a general user directory — see adminUsers.route.js.
+    assignable: () => [...queryKeys.users.all, 'assignable'] as const,
   },
   notifications: {
     all: ['notifications'] as const,

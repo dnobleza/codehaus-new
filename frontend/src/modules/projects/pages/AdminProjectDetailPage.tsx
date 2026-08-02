@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -12,6 +12,9 @@ import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
 import type { ApiError } from '@/shared/api/apiClient';
 import { formatPHP } from '@/shared/utils/currency';
+import { useAuthStore } from '@/shared/store/auth.store';
+import { useCan } from '@/shared/auth/useCan';
+import { dashboardPathForRole } from '@/shared/constants/roles';
 import type { ProjectStatusCode } from '@/shared/types/project.types';
 import { useAdminPackages } from '@/modules/packages/api/packages.queries';
 import {
@@ -30,6 +33,7 @@ import {
 } from '../api/projects.queries';
 import { AdminQuotationBuilder } from '../components/AdminQuotationBuilder';
 import { ProjectStatusStepper } from '../components/ProjectStatusStepper';
+import { ProjectTeamPanel } from '../components/ProjectTeamPanel';
 import { PROJECT_STATUS_LABELS, getSelectableNextStatuses } from '../utils/projectStatus';
 
 const QUOTATION_STATUS_BADGE = {
@@ -48,6 +52,24 @@ const PAYMENT_STATUS_BADGE = {
 } as const;
 
 /**
+ * Mirrors `STAFF_ASSIGNABLE_STATUSES` in `backend/src/constants/roles.js`
+ * exactly — the set of `status_code` values a STAFF caller may set via
+ * `PATCH /admin/projects/:id/status`. Kept here (not in `projectStatus.ts`)
+ * since this page is the only consumer of the role-based filter.
+ */
+const STAFF_ASSIGNABLE_STATUSES = new Set<ProjectStatusCode>([
+  'scheduled',
+  'in_development',
+  'in_testing',
+  'client_review',
+  'revision_requested',
+  'revision_in_progress',
+  'ready_for_deployment',
+  'deployed',
+  'waiting_for_client',
+]);
+
+/**
  * Admin/staff project detail — a dedicated page rather than a Drawer.
  *
  * Decision: this view combines the client's request, a quotation
@@ -60,8 +82,22 @@ const PAYMENT_STATUS_BADGE = {
  */
 export function AdminProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const location = useLocation();
-  const basePath = location.pathname.startsWith('/staff') ? '/staff/dashboard' : '/admin/dashboard';
+  const role = useAuthStore((state) => state.user?.role);
+  const basePath = role ? dashboardPathForRole(role) : '/admin/dashboard';
+
+  const canAcceptProject = useCan('project.accept');
+  const canDeclineProject = useCan('project.decline');
+  const canReviewRequest = canAcceptProject || canDeclineProject;
+  const canSetCommercialStatus = useCan('project.setCommercialStatus');
+  const canSetDeliveryStatus = useCan('project.setDeliveryStatus');
+  const canCreateQuotation = useCan('quotation.create');
+  const canEditQuotation = useCan('quotation.edit');
+  const canSendQuotation = useCan('quotation.send');
+  const canManageQuotation = canCreateQuotation || canEditQuotation || canSendQuotation;
+  const canVerifyPayment = useCan('payment.verify');
+  const canRejectPayment = useCan('payment.reject');
+  const canViewPaymentProof = useCan('payment.viewProof');
+  const canDeliverProject = useCan('project.deliver');
 
   const { data: project, isLoading, isError, refetch } = useAdminProject(id);
   const { data: packages } = useAdminPackages();
@@ -114,10 +150,23 @@ export function AdminProjectDetailPage() {
   const isDelivered = project.status_code === 'delivered' || project.status_code === 'completed';
 
   const needsQuotationAction =
-    !isSubmitted && !isCancelled && (!latestQuotation || latestQuotation.status === 'draft');
-  const canPrepareRevision = latestQuotation?.status === 'rejected';
+    !isSubmitted &&
+    !isCancelled &&
+    canManageQuotation &&
+    (!latestQuotation || latestQuotation.status === 'draft');
+  const canPrepareRevision = canManageQuotation && latestQuotation?.status === 'rejected';
 
-  const statusOptions = getSelectableNextStatuses(project.status_code);
+  // Staff reach the same generic status Select admin does, but the backend
+  // (`STAFF_ASSIGNABLE_STATUSES` in `projects.service.js`) only lets a staff
+  // caller land on a delivery-execution status — never a commercial one
+  // (e.g. `completed`, `cancelled`, `accepted`). Mirrored here so staff never
+  // see an option the API would 403 on submit.
+  const rawStatusOptions = getSelectableNextStatuses(project.status_code);
+  const statusOptions = canSetCommercialStatus
+    ? rawStatusOptions
+    : rawStatusOptions.filter(
+        (status) => status === project.status_code || STAFF_ASSIGNABLE_STATUSES.has(status),
+      );
   const statusError = updateStatus.error as ApiError | null;
   const reviewError = (acceptProject.error ?? declineProject.error) as ApiError | null;
   const isReviewPending = acceptProject.isPending || declineProject.isPending;
@@ -176,7 +225,20 @@ export function AdminProjectDetailPage() {
         </CardContent>
       </Card>
 
-      {isSubmitted && (
+      {/* Delivery team. Sits high on the page because assignment is what makes
+          a project visible to staff at all — an unassigned project is invisible
+          to everyone but admin. Renders nothing for clients. */}
+      <ProjectTeamPanel projectId={project.id} />
+
+      {isSubmitted && !canReviewRequest && (
+        <Alert
+          variant="info"
+          title="Awaiting admin review"
+          description="This request hasn't been accepted yet. Accepting or declining a new request is an admin decision."
+        />
+      )}
+
+      {isSubmitted && canReviewRequest && (
         <Card>
           <CardHeader>
             <CardTitle>Review request</CardTitle>
@@ -241,7 +303,7 @@ export function AdminProjectDetailPage() {
         </Card>
       )}
 
-      {!isSubmitted && (
+      {!isSubmitted && canSetDeliveryStatus && (
         <Card>
           <CardHeader>
             <CardTitle>Update status</CardTitle>
@@ -336,7 +398,9 @@ export function AdminProjectDetailPage() {
 
           {!needsQuotationAction && !canPrepareRevision && (
             <p className="text-sm text-muted-foreground">
-              Waiting on the client to respond, or the quotation has already been actioned.
+              {canManageQuotation
+                ? 'Waiting on the client to respond, or the quotation has already been actioned.'
+                : 'Waiting on an admin to prepare a quotation, or on the client to respond to one already sent.'}
             </p>
           )}
 
@@ -384,9 +448,11 @@ export function AdminProjectDetailPage() {
                 {latestPayment.reference_number ?? '—'}
               </dd>
             </dl>
-            <PaymentProofPreview proofUrl={latestPayment.proof_of_payment_url} />
+            {canViewPaymentProof && (
+              <PaymentProofPreview proofUrl={latestPayment.proof_of_payment_url} />
+            )}
 
-            {latestPayment.status === 'verification' && (
+            {latestPayment.status === 'verification' && canVerifyPayment && canRejectPayment && (
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
@@ -434,13 +500,15 @@ export function AdminProjectDetailPage() {
                       ? `${pendingInstallments} installment${pendingInstallments === 1 ? '' : 's'} remaining before this project can be delivered.`
                       : 'All installments paid — ready to deliver.'}
                 </p>
-                <Button
-                  className="self-start"
-                  onClick={() => markDelivered.mutate()}
-                  disabled={!canDeliver || markDelivered.isPending}
-                >
-                  {markDelivered.isPending ? 'Marking as delivered...' : 'Mark as delivered'}
-                </Button>
+                {canDeliverProject && (
+                  <Button
+                    className="self-start"
+                    onClick={() => markDelivered.mutate()}
+                    disabled={!canDeliver || markDelivered.isPending}
+                  >
+                    {markDelivered.isPending ? 'Marking as delivered...' : 'Mark as delivered'}
+                  </Button>
+                )}
               </>
             )}
           </CardContent>

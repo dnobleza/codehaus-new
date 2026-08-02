@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
+import { useCan } from '@/shared/auth/useCan';
 import type { ApiError } from '@/shared/api/apiClient';
 import { toNumber } from '@/shared/utils/currency';
 import { formatTimelineRange } from '@/shared/utils/timeline';
@@ -54,6 +55,17 @@ export function AdminQuotationBuilder({
   draftQuotation,
   onDone,
 }: AdminQuotationBuilderProps) {
+  // Defense-in-depth: the only current caller (`AdminProjectDetailPage`)
+  // already never renders this component for a role that lacks quotation
+  // capabilities, but this component owns pricing/discount authority
+  // (commercial, admin-only per the backend's authorization split), so it
+  // refuses to render its form for a caller without that capability even if
+  // mounted from somewhere else in the future.
+  const canCreateQuotation = useCan('quotation.create');
+  const canEditQuotation = useCan('quotation.edit');
+  const canSendQuotation = useCan('quotation.send');
+  const canManageQuotation = canCreateQuotation || canEditQuotation || canSendQuotation;
+
   const {
     data: rawPackages,
     isLoading: loadingPackages,
@@ -156,6 +168,7 @@ export function AdminQuotationBuilder({
     onDone?.();
   }
 
+  if (!canManageQuotation) return null;
   if (loadingPackages || loadingAddons) return <LoadingSpinner label="Loading catalog..." />;
   if (packagesError) return <ErrorState onRetry={() => refetchPackages()} />;
   if (addonsError) return <ErrorState onRetry={() => refetchAddons()} />;

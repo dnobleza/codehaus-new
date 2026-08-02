@@ -1,4 +1,5 @@
 const logger = require('../utils/logger');
+const config = require('../config/env');
 const { registerSchema, loginSchema } = require('../validators/auth.validator');
 const authService = require('../services/auth.service');
 const TAG = '[AUTH-CONTROLLER]';
@@ -6,7 +7,7 @@ const TAG = '[AUTH-CONTROLLER]';
 const REFRESH_COOKIE_NAME = 'refresh_token';
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: config.isProduction,
   sameSite: 'strict',
   path: '/auth',
 };

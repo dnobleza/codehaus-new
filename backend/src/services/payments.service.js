@@ -4,6 +4,7 @@ const projectsRepo = require('../repositories/projects.repository');
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
 const notificationsService = require('./notifications.service');
 const { resolvePaymentProofPath } = require('../middleware/upload.middleware');
+const { ROLES } = require('../constants/roles');
 const logger = require('../utils/logger');
 const TAG = '[PAYMENTS-SERVICE]';
 
@@ -100,7 +101,17 @@ async function listPaymentsForClientProject(projectId, clientId) {
   return paymentsRepo.listByProject(projectId);
 }
 
-async function listPaymentsAdmin(filters) {
+// `actorRole`/`actorUserId` scope this the same way projects.service.js's
+// listProjectsAdmin does: STAFF only sees payments on projects they're
+// formally assigned to (project_assignments), ADMIN keeps seeing everything.
+// Route-level gating can't express this one -- there is no :id on the list
+// route -- so the role travels to the repository, the only layer that knows
+// how to filter by assignment.
+async function listPaymentsAdmin(filters, actorRole, actorUserId) {
+  const role = actorRole ? String(actorRole).toUpperCase() : null;
+  if (role === ROLES.STAFF) {
+    return paymentsRepo.listAssignedTo(actorUserId, filters);
+  }
   return paymentsRepo.listAll(filters);
 }
 
@@ -177,13 +188,22 @@ async function rejectPayment(paymentId, verifiedByUserId) {
 }
 
 // Authorization for GET /projects/:id/payments/:paymentId/proof: the
-// requesting user must be the client who owns the project, or role
-// ADMIN/STAFF. Every failure path (project doesn't exist, payment doesn't
-// exist, payment belongs to a different project, requester is neither the
-// owner nor elevated) throws the SAME 404 -- never a 403 -- so a caller who
-// isn't authorized can't distinguish "this doesn't exist" from "this exists
-// but isn't yours", which would otherwise leak which project/payment ids
-// are real to someone probing the endpoint.
+// requesting user must be the client who owns the project, or role ADMIN.
+// Every failure path (project doesn't exist, payment doesn't exist, payment
+// belongs to a different project, requester is neither the owner nor elevated)
+// throws the SAME 404 -- never a 403 -- so a caller who isn't authorized can't
+// distinguish "this doesn't exist" from "this exists but isn't yours", which
+// would otherwise leak which project/payment ids are real to someone probing
+// the endpoint.
+//
+// STAFF is deliberately NOT elevated here. These files are bank transfer slips
+// and GCash screenshots: account numbers, account holder names, phone numbers.
+// app.js excludes the whole payment-proofs directory from static serving for
+// exactly that reason, and granting every staff member blanket read access
+// through this route reopened the hole the static-mount exclusion closed.
+// Staff owns delivery execution and has no reason to see a client's banking
+// details; verification -- the one job that requires looking at a proof -- is
+// admin-only (adminPayments.route.js).
 async function resolveProofForAccess({ projectId, paymentId, requestingUser }) {
   const project = await projectsRepo.findById(projectId);
   if (!project) throw httpError(404, 'Payment not found');
@@ -192,7 +212,7 @@ async function resolveProofForAccess({ projectId, paymentId, requestingUser }) {
   if (!payment || !payment.proof_of_payment_url) throw httpError(404, 'Payment not found');
 
   const role = String(requestingUser?.role || '').toUpperCase();
-  const isElevated = role === 'ADMIN' || role === 'STAFF';
+  const isElevated = role === ROLES.ADMIN;
   const isOwner = String(project.client_id) === String(requestingUser?.id);
 
   if (!isElevated && !isOwner) throw httpError(404, 'Payment not found');

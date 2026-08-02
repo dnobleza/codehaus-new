@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { DataTable } from '@/shared/components/feature/DataTable';
 import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
+import { useAuthStore } from '@/shared/store/auth.store';
+import { dashboardPathForRole } from '@/shared/constants/roles';
 import type { ProjectStatusCode } from '@/shared/types/project.types';
 import { useAdminPackages } from '@/modules/packages/api/packages.queries';
 import { useAdminProjects } from '../api/projects.queries';
@@ -36,8 +38,8 @@ const STATUS_FILTER_OPTIONS: { value: ProjectStatusCode | 'all'; label: string }
  * result; a real client name requires a backend addition.
  */
 export function AdminProjectsListPage() {
-  const location = useLocation();
-  const basePath = location.pathname.startsWith('/staff') ? '/staff/dashboard' : '/admin/dashboard';
+  const role = useAuthStore((state) => state.user?.role);
+  const basePath = role ? dashboardPathForRole(role) : '/admin/dashboard';
 
   const [statusFilter, setStatusFilter] = useState<ProjectStatusCode | 'all'>('all');
   const filters = statusFilter === 'all' ? undefined : { statusCode: statusFilter };

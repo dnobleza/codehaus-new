@@ -6,7 +6,13 @@ const TAG = '[ADMIN-PAYMENTS-CONTROLLER]';
 
 exports.list = async (req, res, next) => {
   try {
-    const payments = await paymentsService.listPaymentsAdmin({ status: req.query.status });
+    // Role travels to the service so STAFF can be scoped to payments on
+    // their own assigned projects -- see payments.service.js#listPaymentsAdmin.
+    const payments = await paymentsService.listPaymentsAdmin(
+      { status: req.query.status },
+      req.user?.role,
+      req.user?.id
+    );
     logger.info(`${TAG} Listed ${payments.length} payments (admin)`);
     res.status(200).json({ success: true, message: 'Payments retrieved successfully', data: presentPayments(payments) });
   } catch (error) {

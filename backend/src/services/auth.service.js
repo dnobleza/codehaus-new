@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const config = require('../config/env');
 const logger = require('../utils/logger');
 const TAG = '[AUTH-SERVICE]';
 
@@ -20,7 +21,7 @@ function hashRefreshToken(rawToken) {
 }
 
 function issueAccessToken(user) {
-  return jwt.sign({ sub: String(user.id), role: user.role }, process.env.JWT_SECRET, {
+  return jwt.sign({ sub: String(user.id), role: user.role }, config.jwtSecret, {
     expiresIn: ACCESS_TOKEN_TTL,
   });
 }
