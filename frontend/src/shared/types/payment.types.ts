@@ -33,6 +33,21 @@ export interface Payment {
   verified_by: number | string | null;
   verified_at: string | null;
   created_at: string;
+  /**
+   * Context joined in on the admin/staff verification queue only
+   * (`payments.repository.js`'s PAYMENT_WITH_CONTEXT_SELECT). Absent on the
+   * client's own payment reads.
+   *
+   * All nullable — every join is a LEFT JOIN so a payment never drops out of
+   * the verification queue because a related row is missing, and
+   * `installment_id` is itself nullable for rows predating the installment
+   * schedule. Render through `paymentClientName()` / with fallbacks.
+   */
+  project_title?: string | null;
+  project_reference_code?: string | null;
+  client_first_name?: string | null;
+  client_last_name?: string | null;
+  installment_sequence?: number | null;
 }
 
 /**

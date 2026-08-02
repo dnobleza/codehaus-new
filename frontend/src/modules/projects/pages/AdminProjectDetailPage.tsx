@@ -16,6 +16,7 @@ import { useAuthStore } from '@/shared/store/auth.store';
 import { useCan } from '@/shared/auth/useCan';
 import { dashboardPathForRole } from '@/shared/constants/roles';
 import type { ProjectStatusCode } from '@/shared/types/project.types';
+import { clientName } from '@/shared/utils/people';
 import { useAdminPackages } from '@/modules/packages/api/packages.queries';
 import {
   useAdminPayments,
@@ -211,7 +212,7 @@ export function AdminProjectDetailPage() {
         </Link>
         <h1 className="text-2xl font-bold text-foreground">{project.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Client #{project.client_id} &middot; {packageName}
+          {clientName(project)} &middot; {packageName}
           {packagePriceLabel && <> &middot; {packagePriceLabel}</>}
         </p>
         {project.request_details && (

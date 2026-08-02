@@ -9,6 +9,7 @@ import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
 import { useAuthStore } from '@/shared/store/auth.store';
 import { dashboardPathForRole } from '@/shared/constants/roles';
 import type { ProjectStatusCode } from '@/shared/types/project.types';
+import { clientName } from '@/shared/utils/people';
 import { useAdminPackages } from '@/modules/packages/api/packages.queries';
 import { useAdminProjects } from '../api/projects.queries';
 import { PROJECT_STATUS_BADGE_VARIANT, PROJECT_STATUS_LABELS } from '../utils/projectStatus';
@@ -30,12 +31,10 @@ const STATUS_FILTER_OPTIONS: { value: ProjectStatusCode | 'all'; label: string }
  * `adminProjects.route.js`) — `useLocation` derives the correct detail link
  * prefix so one component serves both routes without a prop.
  *
- * KNOWN GAP (see report): `GET /admin/projects` returns bare `projects`
- * rows with no client name joined in (verified against
- * `projects.repository.js#listAll` — plain `SELECT * FROM projects`, and
- * there is no `/admin/clients` or user-lookup endpoint anywhere in this
- * API). The "Client" column below can only show the raw `client_id` as a
- * result; a real client name requires a backend addition.
+ * The "Client" column shows a real name: `GET /admin/projects` now joins
+ * `users`/`registration` (`projects.repository.js`'s
+ * PROJECT_WITH_CLIENT_SELECT). The join is LEFT, so `clientName()` still
+ * degrades gracefully when a client record is missing.
  */
 export function AdminProjectsListPage() {
   const role = useAuthStore((state) => state.user?.role);
@@ -95,7 +94,7 @@ export function AdminProjectsListPage() {
             },
             {
               header: 'Client',
-              accessor: (row) => `Client #${row.client_id}`,
+              accessor: (row) => clientName(row),
             },
             {
               header: 'Package',
