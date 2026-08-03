@@ -123,15 +123,31 @@ export function isWaitingOnAdmin(status: ProjectStatusCode): boolean {
 
 /**
  * Curated "sensible next step(s)" per status, for the admin status-change
- * control (`AdminProjectDetailPage`). The backend does NOT enforce a
- * transition graph — `PATCH /admin/projects/:id/status` accepts any
- * `status_code` that exists in the `project_statuses` lookup table
- * (confirmed in `projects.service.js#updateProjectStatusAdmin`'s comment:
- * "there is no state-machine/adjacency table... nothing at the DATA layer
- * stops any status_code... from being set here"). This map is therefore a
- * frontend-only UX constraint, not a security boundary: an unconstrained
- * 21-item dropdown that lets an admin jump from Draft straight to Completed
- * would be a bad admin experience even though the API itself allows it.
+ * control (`AdminProjectDetailPage`).
+ *
+ * The backend NOW ENFORCES A TRANSITION GRAPH TOO. This comment previously
+ * said the opposite, and was correct at the time: `PATCH
+ * /admin/projects/:id/status` used to accept any `status_code` that merely
+ * existed in the `project_statuses` lookup table, so `submitted → completed`
+ * in one request succeeded server-side and this map was the only guard
+ * anywhere. That hole is closed —
+ * `backend/src/constants/projectStatusTransitions.js` holds the server-side
+ * adjacency map, enforced in `projects.service.js#updateProjectStatusAdmin`,
+ * which now returns 409 for an illegal transition.
+ *
+ * This map remains a UX narrowing, not the security boundary: it keeps the
+ * dropdown short and sensible rather than listing all 22 codes. The backend
+ * graph is the boundary.
+ *
+ * The two are kept deliberately in sync in ONE direction — the backend is a
+ * superset of this map, so anything the dropdown offers is guaranteed to be
+ * accepted. That invariant is asserted by
+ * `backend/tests/projectStatusTransitions.test.js`, which keeps a transcribed
+ * copy of this map; if you add an entry here, add it there (and to the backend
+ * graph) or that test fails. The one intentional difference is that the
+ * backend also permits `deployed → delivered`, which this dropdown omits
+ * because delivery has its own dedicated, payment-gated endpoint.
+ *
  * `on_hold` and `cancelled` are deliberately available from every
  * non-terminal status (they're documented as reachable from anywhere), and
  * `on_hold` can resume back into the full forward-progression list.

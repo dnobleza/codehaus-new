@@ -5,10 +5,13 @@ const packagesRepo = require('../repositories/packages.repository');
 const quotationsRepo = require('../repositories/quotations.repository');
 const projectStatusesRepo = require('../repositories/projectStatuses.repository');
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
+const activityRepo = require('../repositories/activity.repository');
 const projectOverviewService = require('./projectOverview.service');
 const notificationsService = require('./notifications.service');
 const usersService = require('./users.service');
 const { ROLES, STAFF_ASSIGNABLE_STATUSES } = require('../constants/roles');
+const { isTransitionAllowed, getAllowedNextStatuses } = require('../constants/projectStatusTransitions');
+const { ACTIVITY_ACTIONS } = require('../constants/activityActions');
 const logger = require('../utils/logger');
 const TAG = '[PROJECTS-SERVICE]';
 
@@ -108,21 +111,39 @@ async function getProjectAdmin(id) {
   return { ...project, quotations, paymentInstallments };
 }
 
-// Judgment call (documented per task brief): the schema has no state-
-// machine/adjacency table for project_statuses (confirmed in the design
-// doc -- it is a flat lookup), so nothing at the DATA layer stops any
-// status_code that exists in project_statuses from being set here. The
-// actual enforcement of "clients can't set arbitrary status" is that this
-// function is ONLY ever reachable from the admin/staff route
-// (adminProjects.route.js gates it with requireRole('admin', 'staff')) --
-// there is no generic PATCH /projects/:id/status reachable by role CLIENT
-// anywhere in this API. The only project-status transitions a client CAN
-// trigger are the narrow, hard-coded ones inside quotations.service
-// (accept -> 'quotation_accepted', reject -> 'quotation_rejected') and
-// payments.service (submit payment -> 'payment_verification', admin
-// verifies -> 'accepted'). This keeps the allow-list simple (role-based
-// route gating) instead of building a parallel status-transition-graph
-// just for this one admin endpoint.
+// This is the ONLY endpoint that accepts a free-form, caller-supplied
+// status_code, so it carries three independent guards, in widening order of
+// cost (cheapest first, so a denial never touches the database unnecessarily):
+//
+//   1. ROLE (`STAFF_ASSIGNABLE_STATUSES`) -- may this role set this status at
+//      all? Runs before pool.connect(). Staff owns delivery execution and must
+//      not be able to declare a project completed/cancelled/accepted.
+//   2. EXISTENCE (`projectStatusesRepo.exists`) -- is this a real status code?
+//   3. TRANSITION (`isTransitionAllowed`) -- is this status reachable from
+//      where the project actually is right now?
+//
+// Guard 3 is new, and closes a real hole: previously the existence check was
+// the ONLY constraint, so `submitted -> completed` or `delivered -> draft` in a
+// single PATCH succeeded server-side. The transition graph was enforced purely
+// client-side, in the admin dropdown's `getSelectableNextStatuses`
+// (frontend/src/modules/projects/utils/projectStatus.ts) -- a UX constraint, not
+// a security boundary, and trivially bypassed by calling the API directly.
+//
+// The graph lives in constants/projectStatusTransitions.js; that file documents
+// why it is an in-code adjacency map rather than a `project_status_transitions`
+// table, and enumerates the other status writers in this codebase that
+// deliberately bypass it (accept/decline/deliver here, quotations.service,
+// payments.service#verifyPayment) because they are hard-coded transitions with
+// their own, narrower preconditions rather than caller-supplied input.
+//
+// It is checked IN ADDITION to guard 1, not instead of it: the two answer
+// different questions, and a staff member setting a delivery status still has
+// to be moving the project somewhere reachable.
+//
+// Ordering note: guard 3 necessarily runs after the project row is loaded (it
+// needs the CURRENT status), so it lives inside the transaction alongside the
+// existence check.
+//
 // Wrapped in a transaction (unlike the other simple status-mutating
 // functions in this file) because a transition to 'in_development' must
 // ALSO generate the standard milestone template (see
@@ -153,6 +174,24 @@ async function updateProjectStatusAdmin(id, statusCode, actorRole) {
 
     const validStatus = await projectStatusesRepo.exists(statusCode, client);
     if (!validStatus) throw httpError(400, `Unknown status_code: ${statusCode}`);
+
+    // 409 Conflict, not 400: the status code itself is perfectly valid, it is
+    // the project's current state that makes this particular move illegal --
+    // the same semantics acceptProjectAdmin/declineProjectAdmin already use for
+    // "this project is not in a state where that action makes sense".
+    if (!isTransitionAllowed(project.status_code, statusCode)) {
+      const allowed = getAllowedNextStatuses(project.status_code);
+      logger.info(
+        `${TAG} Rejected illegal transition ${project.status_code} -> ${statusCode} on project ${id}`
+      );
+      throw httpError(
+        409,
+        allowed.length > 0
+          ? `Cannot change status from "${project.status_code}" to "${statusCode}". ` +
+              `Allowed next statuses: ${allowed.join(', ')}.`
+          : `Project is in terminal status "${project.status_code}" and its status can no longer be changed.`
+      );
+    }
 
     const updated = await projectsRepo.updateStatus(id, statusCode, client);
 
@@ -188,49 +227,124 @@ async function updateProjectStatusAdmin(id, statusCode, actorRole) {
 }
 
 // Accept / decline are the two admin actions on a freshly SUBMITTED project
-// request. Unlike updateProjectStatusAdmin (which is a free-form status change
-// with no transition guard), these two are only legal from the 'submitted'
-// state -- a project already under review, cancelled, in development, etc.
-// must not be re-accepted/re-declined -- so they enforce that guard here
+// request. They are NOT routed through the transition graph enforced in
+// updateProjectStatusAdmin: their target status is hard-coded, and their own
+// precondition ("must be 'submitted'") is strictly narrower than anything the
+// graph expresses -- a project already under review, cancelled, in development,
+// etc. must not be re-accepted/re-declined -- so they enforce that guard here
 // (409 Conflict), on top of the shared 404-if-missing check.
-async function acceptProjectAdmin(id) {
-  const project = await projectsRepo.findById(id);
-  if (!project) throw httpError(404, 'Project not found');
-  if (project.status_code !== 'submitted') {
-    throw httpError(409, 'Only a submitted project request can be accepted');
+//
+// BOTH ARE NOW TRANSACTIONAL (neither was before). Accepting or declining a
+// project request is a commercial commitment, and its audit entry must be
+// atomic with it: no orphaned "accepted" log line for a change that rolled
+// back, and no silent acceptance without a record of who made it. The project
+// row is re-read FOR UPDATE inside the transaction so two admins racing on the
+// same submitted request cannot both pass the 'submitted' check and both log.
+async function acceptProjectAdmin(id, actorUserId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows } = await client.query('SELECT * FROM projects WHERE id = $1 FOR UPDATE', [id]);
+    const project = rows[0];
+    if (!project) throw httpError(404, 'Project not found');
+    if (project.status_code !== 'submitted') {
+      throw httpError(409, 'Only a submitted project request can be accepted');
+    }
+
+    const updated = await projectsRepo.updateStatus(id, 'under_review', client);
+
+    await activityRepo.create(
+      {
+        projectId: id,
+        actorUserId,
+        actionType: ACTIVITY_ACTIONS.PROJECT_ACCEPTED,
+        summary: `accepted project request "${project.title}" for review`,
+        metadata: {
+          from: project.status_code,
+          to: 'under_review',
+          referenceCode: project.reference_code,
+        },
+      },
+      client
+    );
+
+    await notificationsService.notify(
+      {
+        userId: project.client_id,
+        eventType: 'project_accepted',
+        projectId: id,
+        context: { projectTitle: project.title },
+      },
+      client
+    );
+
+    await client.query('COMMIT');
+    logger.info(`${TAG} Project ${id} accepted -> under_review by user ${actorUserId}`);
+    return updated;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  const updated = await projectsRepo.updateStatus(id, 'under_review');
-
-  await notificationsService.notify({
-    userId: project.client_id,
-    eventType: 'project_accepted',
-    projectId: id,
-    context: { projectTitle: project.title },
-  });
-
-  logger.info(`${TAG} Project ${id} accepted -> under_review`);
-  return updated;
 }
 
-async function declineProjectAdmin(id, reason) {
-  const project = await projectsRepo.findById(id);
-  if (!project) throw httpError(404, 'Project not found');
-  if (project.status_code !== 'submitted') {
-    throw httpError(409, 'Only a submitted project request can be declined');
+async function declineProjectAdmin(id, reason, actorUserId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows } = await client.query('SELECT * FROM projects WHERE id = $1 FOR UPDATE', [id]);
+    const project = rows[0];
+    if (!project) throw httpError(404, 'Project not found');
+    if (project.status_code !== 'submitted') {
+      throw httpError(409, 'Only a submitted project request can be declined');
+    }
+
+    const updated = await projectsRepo.decline(id, reason, client);
+
+    // The decline reason is already captured on the project row itself
+    // (017_add_project_decline_reason.sql); it is mirrored into the audit
+    // entry deliberately, because `projects.decline_reason` is mutable state
+    // that a later action could overwrite, whereas activity_log is append-only.
+    // The audit trail must record what the reason WAS at the moment of the
+    // decision, not whatever it happens to say now.
+    await activityRepo.create(
+      {
+        projectId: id,
+        actorUserId,
+        actionType: ACTIVITY_ACTIONS.PROJECT_DECLINED,
+        summary: `declined project request "${project.title}": ${reason}`,
+        metadata: {
+          from: project.status_code,
+          to: 'cancelled',
+          reason,
+          referenceCode: project.reference_code,
+        },
+      },
+      client
+    );
+
+    await notificationsService.notify(
+      {
+        userId: project.client_id,
+        eventType: 'project_declined',
+        projectId: id,
+        context: { projectTitle: project.title, reason },
+      },
+      client
+    );
+
+    await client.query('COMMIT');
+    logger.info(`${TAG} Project ${id} declined -> cancelled by user ${actorUserId}`);
+    return updated;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  const updated = await projectsRepo.decline(id, reason);
-
-  await notificationsService.notify({
-    userId: project.client_id,
-    eventType: 'project_declined',
-    projectId: id,
-    context: { projectTitle: project.title, reason },
-  });
-
-  logger.info(`${TAG} Project ${id} declined -> cancelled`);
-  return updated;
 }
 
 // Admin/staff-only. Gated purely on payment completion -- ALL of a
@@ -238,31 +352,72 @@ async function declineProjectAdmin(id, reason) {
 // docs/superpowers/specs/2026-07-18-payment-installment-plan-design.md:
 // delivery readiness is a build/QA judgment call, independent of exact
 // status-sequencing.
-async function markProjectDeliveredAdmin(id) {
-  const project = await projectsRepo.findById(id);
-  if (!project) throw httpError(404, 'Project not found');
+// NOW TRANSACTIONAL (it was not before), for two reasons that reinforce each
+// other. First, the audit entry must be atomic with the delivery declaration.
+// Second -- and independently a latent bug -- the payment-completeness gate was
+// previously read OUTSIDE any transaction, so an installment could be marked
+// paid (or a schedule extended) between the count and the status write. Reading
+// the project FOR UPDATE and doing the counts on the same connection closes
+// that window as well.
+async function markProjectDeliveredAdmin(id, actorUserId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  const totalInstallments = await paymentInstallmentsRepo.countForProject(id);
-  if (totalInstallments === 0) {
-    throw httpError(409, 'This project has no payment schedule yet; nothing to deliver against');
+    const { rows } = await client.query('SELECT * FROM projects WHERE id = $1 FOR UPDATE', [id]);
+    const project = rows[0];
+    if (!project) throw httpError(404, 'Project not found');
+
+    const totalInstallments = await paymentInstallmentsRepo.countForProject(id, client);
+    if (totalInstallments === 0) {
+      throw httpError(409, 'This project has no payment schedule yet; nothing to deliver against');
+    }
+
+    const pendingInstallments = await paymentInstallmentsRepo.countPending(id, client);
+    if (pendingInstallments > 0) {
+      throw httpError(409, `Project is not fully paid; ${pendingInstallments} installment(s) remaining`);
+    }
+
+    const updated = await projectsRepo.updateStatus(id, 'delivered', client);
+
+    // `installmentCount` is recorded because the delivery gate is defined
+    // entirely by payment completeness -- the audit entry should carry the
+    // evidence the decision was made on, not just its outcome.
+    await activityRepo.create(
+      {
+        projectId: id,
+        actorUserId,
+        actionType: ACTIVITY_ACTIONS.PROJECT_DELIVERED,
+        summary: `marked project "${project.title}" as delivered`,
+        metadata: {
+          from: project.status_code,
+          to: 'delivered',
+          installmentCount: totalInstallments,
+          referenceCode: project.reference_code,
+        },
+      },
+      client
+    );
+
+    await notificationsService.notify(
+      {
+        userId: project.client_id,
+        eventType: 'project_delivered',
+        projectId: id,
+        context: { projectTitle: project.title },
+      },
+      client
+    );
+
+    await client.query('COMMIT');
+    logger.info(`${TAG} Project ${id} marked delivered by user ${actorUserId}`);
+    return updated;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  const pendingInstallments = await paymentInstallmentsRepo.countPending(id);
-  if (pendingInstallments > 0) {
-    throw httpError(409, `Project is not fully paid; ${pendingInstallments} installment(s) remaining`);
-  }
-
-  const updated = await projectsRepo.updateStatus(id, 'delivered');
-
-  await notificationsService.notify({
-    userId: project.client_id,
-    eventType: 'project_delivered',
-    projectId: id,
-    context: { projectTitle: project.title },
-  });
-
-  logger.info(`${TAG} Project ${id} marked delivered`);
-  return updated;
 }
 
 // Assignment management (admin-only, see adminProjects.route.js). Inert

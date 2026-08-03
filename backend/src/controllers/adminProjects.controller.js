@@ -55,7 +55,8 @@ exports.updateStatus = async (req, res, next) => {
 
 exports.accept = async (req, res, next) => {
   try {
-    const project = await projectsService.acceptProjectAdmin(req.params.id);
+    // `req.user.id` is the audit actor -- see activity_log's actor attribution.
+    const project = await projectsService.acceptProjectAdmin(req.params.id, req.user.id);
     logger.info(`${TAG} Project ${req.params.id} accepted`);
     res.status(200).json({ success: true, message: 'Project request accepted', data: project });
   } catch (error) {
@@ -66,7 +67,7 @@ exports.accept = async (req, res, next) => {
 exports.decline = async (req, res, next) => {
   try {
     const { reason } = adminDeclineSchema.parse(req.body);
-    const project = await projectsService.declineProjectAdmin(req.params.id, reason);
+    const project = await projectsService.declineProjectAdmin(req.params.id, reason, req.user.id);
     logger.info(`${TAG} Project ${req.params.id} declined`);
     res.status(200).json({ success: true, message: 'Project request declined', data: project });
   } catch (error) {
@@ -76,7 +77,7 @@ exports.decline = async (req, res, next) => {
 
 exports.deliver = async (req, res, next) => {
   try {
-    const project = await projectsService.markProjectDeliveredAdmin(req.params.id);
+    const project = await projectsService.markProjectDeliveredAdmin(req.params.id, req.user.id);
     logger.info(`${TAG} Project ${req.params.id} marked delivered`);
     res.status(200).json({ success: true, message: 'Project marked as delivered', data: project });
   } catch (error) {

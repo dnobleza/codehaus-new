@@ -2,7 +2,9 @@ const pool = require('../config/database');
 const paymentsRepo = require('../repositories/payments.repository');
 const projectsRepo = require('../repositories/projects.repository');
 const paymentInstallmentsRepo = require('../repositories/paymentInstallments.repository');
+const activityRepo = require('../repositories/activity.repository');
 const notificationsService = require('./notifications.service');
+const { ACTIVITY_ACTIONS } = require('../constants/activityActions');
 const { resolvePaymentProofPath } = require('../middleware/upload.middleware');
 const { ROLES } = require('../constants/roles');
 const { MAX_WITHHOLDING_SHORTFALL_RATE } = require('../constants/payments');
@@ -197,6 +199,40 @@ async function verifyPayment(paymentId, verifiedByUserId) {
       await projectsRepo.updateStatus(payment.project_id, 'accepted', client);
     }
 
+    // AUDIT TRAIL. Written with the caller's transaction client, so a
+    // verification that rolls back can never leave an orphaned log entry
+    // claiming money was accepted -- and, equally, a verification that commits
+    // can never commit WITHOUT its audit row.
+    //
+    // This is the control that gives adminPayments.route.js's admin-only
+    // restriction teeth: segregation of duties is unenforceable after the fact
+    // unless there is an immutable record of which admin accepted which
+    // payment. `shortfall_amount` is captured deliberately -- a withholding-tax
+    // shortfall is the accountant's reconciliation hook against the client's
+    // BIR Form 2307, and is exactly the field an audit would ask about.
+    await activityRepo.create(
+      {
+        projectId: payment.project_id,
+        actorUserId: verifiedByUserId,
+        actionType: ACTIVITY_ACTIONS.PAYMENT_VERIFIED,
+        summary:
+          `verified payment of ${payment.amount} for installment ${installment.sequence}` +
+          (Number(payment.shortfall_amount) > 0
+            ? ` (withholding-tax shortfall of ${payment.shortfall_amount})`
+            : ''),
+        metadata: {
+          paymentId: payment.id,
+          amount: payment.amount,
+          shortfallAmount: payment.shortfall_amount,
+          installmentId: payment.installment_id,
+          installmentSequence: installment.sequence,
+          referenceNumber: payment.reference_number,
+          paymentMethod: payment.payment_method,
+        },
+      },
+      client
+    );
+
     await notifyProjectClient(client, payment.project_id, 'payment_verified', {
       amount: payment.amount,
     });
@@ -215,9 +251,7 @@ async function verifyPayment(paymentId, verifiedByUserId) {
 }
 
 // Rejecting a payment does NOT change the project's status (per the brief:
-// "the client needs to resubmit"). No transaction needed -- this is a
-// single-statement write, unlike verifyPayment which also has to move the
-// project forward.
+// "the client needs to resubmit").
 //
 // `reason` is REQUIRED, and is stored on the payment
 // (028_add_payment_rejection_reason.sql) so the client is told what to fix
@@ -226,20 +260,66 @@ async function verifyPayment(paymentId, verifiedByUserId) {
 // (adminRejectPaymentSchema) enforces presence and length, the repository
 // writes status and reason in one statement, and the reason rides along in the
 // notification context so it reaches the client without an extra fetch.
+//
+// NOW TRANSACTIONAL (it previously was not, being a single-statement write).
+// Refusing a client's money is a financial decision that must be audited, and
+// an audit row is only trustworthy if it cannot exist without the action it
+// records -- nor the action without the row. The rejection, its audit entry and
+// the client notification therefore commit or roll back together, and the row
+// is re-read FOR UPDATE inside the transaction so two admins racing to reject
+// the same payment cannot both log a rejection.
 async function rejectPayment(paymentId, verifiedByUserId, reason) {
-  const payment = await paymentsRepo.findById(paymentId);
-  if (!payment) throw httpError(404, 'Payment not found');
-  if (payment.status === 'verified') throw httpError(409, 'A verified payment cannot be rejected');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  const updated = await paymentsRepo.reject(paymentId, {
-    verifiedBy: verifiedByUserId,
-    verifiedAt: new Date(),
-    reason,
-  });
-  await notifyProjectClient(pool, payment.project_id, 'payment_rejected', { reason });
+    const { rows: paymentRows } = await client.query('SELECT * FROM payments WHERE id = $1 FOR UPDATE', [paymentId]);
+    const payment = paymentRows[0];
+    if (!payment) throw httpError(404, 'Payment not found');
+    if (payment.status === 'verified') throw httpError(409, 'A verified payment cannot be rejected');
 
-  logger.info(`${TAG} Payment ${paymentId} rejected by user ${verifiedByUserId}`);
-  return updated;
+    const updated = await paymentsRepo.reject(
+      paymentId,
+      {
+        verifiedBy: verifiedByUserId,
+        verifiedAt: new Date(),
+        reason,
+      },
+      client
+    );
+
+    // The reason is stored in `summary` as well as `metadata` deliberately:
+    // 022's header specifies `summary` as a pre-rendered human-readable line so
+    // the feed still reads correctly if the metadata shape changes later.
+    await activityRepo.create(
+      {
+        projectId: payment.project_id,
+        actorUserId: verifiedByUserId,
+        actionType: ACTIVITY_ACTIONS.PAYMENT_REJECTED,
+        summary: `rejected payment of ${payment.amount}: ${reason}`,
+        metadata: {
+          paymentId: payment.id,
+          amount: payment.amount,
+          reason,
+          installmentId: payment.installment_id,
+          referenceNumber: payment.reference_number,
+          paymentMethod: payment.payment_method,
+        },
+      },
+      client
+    );
+
+    await notifyProjectClient(client, payment.project_id, 'payment_rejected', { reason });
+
+    await client.query('COMMIT');
+    logger.info(`${TAG} Payment ${paymentId} rejected by user ${verifiedByUserId}`);
+    return updated;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // Authorization for GET /projects/:id/payments/:paymentId/proof: the
