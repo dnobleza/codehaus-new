@@ -340,12 +340,43 @@ describe('the transition graph is enforced against a real database', () => {
     ).rejects.toMatchObject({ statusCode: 409 });
   });
 
-  dbIt('permits a legal step and actually persists it', async () => {
+  dbIt('permits a legal step, persists it, and logs who made it', async () => {
+    // Issue 3: updateProjectStatusAdmin was the sixth commercial action, added
+    // to the audit trail after issue 6 shipped without it. This is the one
+    // assertion the DB-less unit suite structurally cannot make -- it needs a
+    // real activity_log row, written through the real 030 CHECK constraint.
     const clientId = await makeUser();
+    const adminId = await makeUser('ADMIN');
     const project = await makeProject(clientId, 'submitted');
 
-    const updated = await projectsService.updateProjectStatusAdmin(project.id, 'under_review', 'ADMIN');
+    const updated = await projectsService.updateProjectStatusAdmin(
+      project.id,
+      'under_review',
+      'ADMIN',
+      adminId
+    );
     expect(updated.status_code).toBe('under_review');
+
+    const rows = await auditRows(project.id);
+    const entry = rows.find((r) => r.action_type === ACTIVITY_ACTIONS.PROJECT_STATUS_CHANGED);
+    expect(entry, 'expected a project_status_changed audit row').toBeTruthy();
+    expect(entry.actor_user_id).toBe(adminId);
+    expect(entry.metadata).toMatchObject({ from: 'submitted', to: 'under_review' });
+  });
+
+  dbIt('does not log a no-op re-save of the current status', async () => {
+    // Mirrors the existing notification guard: re-applying the status a
+    // project already has is not a transition, so it must not appear in the
+    // trail as one -- a from/to pair that are identical is not what "changed"
+    // means, and would be a false event in a segregation-of-duties log.
+    const clientId = await makeUser();
+    const adminId = await makeUser('ADMIN');
+    const project = await makeProject(clientId, 'submitted');
+
+    await projectsService.updateProjectStatusAdmin(project.id, 'submitted', 'ADMIN', adminId);
+
+    const rows = await auditRows(project.id);
+    expect(rows.find((r) => r.action_type === ACTIVITY_ACTIONS.PROJECT_STATUS_CHANGED)).toBeUndefined();
   });
 
   dbIt('still rejects a status code that does not exist at all, with 400', async () => {

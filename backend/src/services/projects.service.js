@@ -158,7 +158,7 @@ async function getProjectAdmin(id) {
 // express the rule on its own -- staff legitimately needs this endpoint, but
 // must not be able to declare a project completed or cancelled. Omitting
 // `actorRole` (internal callers) applies no restriction.
-async function updateProjectStatusAdmin(id, statusCode, actorRole) {
+async function updateProjectStatusAdmin(id, statusCode, actorRole, actorUserId) {
   const role = actorRole ? String(actorRole).toUpperCase() : null;
   if (role === ROLES.STAFF && !STAFF_ASSIGNABLE_STATUSES.includes(statusCode)) {
     logger.info(`${TAG} Staff denied status "${statusCode}" on project ${id}`);
@@ -201,7 +201,10 @@ async function updateProjectStatusAdmin(id, statusCode, actorRole) {
 
     // Only on an actual transition. Re-applying the status a project already
     // has is a no-op for the client, and notifying would let a repeated admin
-    // save spam their inbox with "is now In Development" over and over.
+    // save spam their inbox with "is now In Development" over and over. The
+    // audit write follows the same guard for the same reason: a no-op save is
+    // not an event, and logging one would put a false transition in the trail
+    // (from and to would be identical, which is not what "changed" means).
     if (project.status_code !== statusCode) {
       const status = await projectStatusesRepo.findByCode(statusCode, client);
       await notificationsService.notify(
@@ -210,6 +213,25 @@ async function updateProjectStatusAdmin(id, statusCode, actorRole) {
           eventType: 'project_status_changed',
           projectId: id,
           context: { projectTitle: project.title, statusLabel: status?.label ?? statusCode },
+        },
+        client
+      );
+
+      // This is the sixth commercial action, and the one that closes the gap
+      // 6dca2fe's audit pass left open: the transition graph proves this move
+      // was legal, this records who made it. actorUserId is threaded from the
+      // controller's req.user.id, same as accept/decline/deliver.
+      await activityRepo.create(
+        {
+          projectId: id,
+          actorUserId,
+          actionType: ACTIVITY_ACTIONS.PROJECT_STATUS_CHANGED,
+          summary: `changed project "${project.title}" status from "${project.status_code}" to "${statusCode}"`,
+          metadata: {
+            from: project.status_code,
+            to: statusCode,
+            referenceCode: project.reference_code,
+          },
         },
         client
       );
