@@ -5,8 +5,8 @@ const pool = require('../config/database');
 
 async function insert(data, db = pool) {
   const { rows } = await db.query(
-    `INSERT INTO payments (project_id, payment_method, amount, reference_number, proof_of_payment_url, status, installment_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)
+    `INSERT INTO payments (project_id, payment_method, amount, reference_number, proof_of_payment_url, status, installment_id, shortfall_amount)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
      RETURNING *`,
     [
       data.projectId,
@@ -16,6 +16,10 @@ async function insert(data, db = pool) {
       data.proofOfPaymentUrl ?? null,
       data.status ?? 'pending',
       data.installmentId ?? null,
+      // Defaults to '0.00' (an exact-amount payment) so any caller that
+      // doesn't know about withholding-tax shortfalls writes the same value
+      // the column's DB default would have. See utils/money.js.
+      data.shortfallAmount ?? '0.00',
     ]
   );
   return rows[0];
@@ -110,6 +114,22 @@ async function setStatus(id, { status, verifiedBy, verifiedAt }, db = pool) {
   return rows[0] || null;
 }
 
+// Rejection is its own statement rather than a `setStatus` call with an extra
+// argument, mirroring projects.repository.js#decline: the reason and the
+// 'rejected' status are one indivisible fact, and hard-coding the status here
+// makes it impossible to write a rejection reason onto a payment that isn't
+// actually rejected.
+async function reject(id, { verifiedBy, verifiedAt, reason }, db = pool) {
+  const { rows } = await db.query(
+    `UPDATE payments
+     SET status = 'rejected', verified_by = $1, verified_at = $2, rejection_reason = $3
+     WHERE id = $4
+     RETURNING *`,
+    [verifiedBy ?? null, verifiedAt ?? null, reason ?? null, id]
+  );
+  return rows[0] || null;
+}
+
 // Every payment across the caller's own projects, newest first, joined to the
 // context the client Invoices page needs: the project's title and the sequence
 // of the installment the payment settled. Ownership is enforced by the join
@@ -131,6 +151,12 @@ async function listByClientWithContext(clientId, db = pool) {
             pr.title AS project_title,
             p.payment_method,
             p.amount,
+            -- The withholding-tax gap between what was due and what was sent,
+            -- and why a rejected submission was refused. Both are surfaced on
+            -- the client's own Invoices/Payments views, which is the whole
+            -- point of storing them (see migrations 027 and 028).
+            p.shortfall_amount,
+            p.rejection_reason,
             p.reference_number,
             p.status,
             p.created_at,
@@ -155,4 +181,5 @@ module.exports = {
   listAll,
   listAssignedTo,
   setStatus,
+  reject,
 };

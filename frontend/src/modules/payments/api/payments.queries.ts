@@ -167,10 +167,16 @@ export function useVerifyPayment(projectId?: string) {
   });
 }
 
+/**
+ * Rejecting requires a reason (the API 400s without one), so the mutation
+ * takes `{ id, reason }` rather than a bare id — mirroring `useDeclineProject`,
+ * the equivalent "refuse with an explanation" mutation for project requests.
+ */
 export function useRejectPayment(projectId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => adminPaymentsApi.reject(id),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      adminPaymentsApi.reject(id, reason),
     onSuccess: () => invalidateAdminPaymentCaches(queryClient, projectId),
   });
 }

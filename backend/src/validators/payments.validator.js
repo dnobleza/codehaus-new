@@ -18,4 +18,12 @@ const createPaymentSchema = z.object({
   referenceNumber: sanitizedString(1, 100).optional(),
 });
 
-module.exports = { createPaymentSchema, PAYMENT_METHODS };
+// An admin rejecting a payment must say why -- the client is being told to
+// resubmit and needs to know what to fix. Mirrors adminDeclineSchema in
+// projects.validator.js (same 1-5000 sanitized range) so the two "explain the
+// refusal" flows in this product validate identically.
+const adminRejectPaymentSchema = z.object({
+  reason: sanitizedString(1, 5000),
+});
+
+module.exports = { createPaymentSchema, adminRejectPaymentSchema, PAYMENT_METHODS };

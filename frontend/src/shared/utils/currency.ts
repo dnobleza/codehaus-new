@@ -21,6 +21,25 @@ const phpFormatter = new Intl.NumberFormat('en-PH', {
   maximumFractionDigits: 2,
 });
 
+/**
+ * Converts a peso amount into an exact integer number of centavos.
+ *
+ * Mirrors `backend/src/utils/money.js`'s `toCentavos`. Money comparisons must
+ * never happen in float space — `Number('98000.00') === Number('98000')` is
+ * fine, but arithmetic on those floats is not (0.1 + 0.2 !== 0.3), and both
+ * sides of a comparison here originate as NUMERIC strings from Postgres.
+ * Compare centavo integers instead.
+ *
+ * Returns `null` for values that aren't finite numbers, so callers reject bad
+ * input explicitly rather than treating it as 0.
+ */
+export function toCentavos(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const asNumber = Number(value);
+  if (!Number.isFinite(asNumber)) return null;
+  return Math.round(asNumber * 100);
+}
+
 /** Formats a peso amount per design-system.md's currency convention (₱, thousands separators). */
 export function formatPHP(value: number | string | null | undefined): string {
   return phpFormatter.format(toNumber(value));

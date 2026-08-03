@@ -45,9 +45,17 @@ const EVENT_BUILDERS = {
     body: `We've verified your ${formatPHP(amount)} payment for ${projectTitle}.`,
     link: '/client/dashboard/invoices',
   }),
-  payment_rejected: ({ projectTitle }) => ({
+  // `reason` mirrors project_declined: the admin is required to supply one
+  // (adminRejectPaymentSchema), so the notification leads with what to fix
+  // rather than a bare "wasn't verified". Still tolerates a missing reason so
+  // a rejection recorded before 028_add_payment_rejection_reason.sql (or by
+  // any future non-API code path) degrades to the old copy instead of
+  // rendering "undefined" at the client.
+  payment_rejected: ({ projectTitle, reason }) => ({
     title: "Payment couldn't be verified",
-    body: `Your payment for ${projectTitle} wasn't verified. Please check the details and resubmit.`,
+    body: reason
+      ? `Your payment for ${projectTitle} wasn't verified: ${reason} Please resubmit.`
+      : `Your payment for ${projectTitle} wasn't verified. Please check the details and resubmit.`,
     link: '/client/dashboard/payments',
   }),
   project_accepted: ({ projectId, projectTitle }) => ({

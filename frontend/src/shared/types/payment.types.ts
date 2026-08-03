@@ -27,9 +27,24 @@ export interface Payment {
   payment_method: PaymentMethod;
   /** NUMERIC(12,2) as a string. */
   amount: string;
+  /**
+   * How far this payment fell short of the installment's due amount, as a
+   * NUMERIC(12,2) string. "0.00" for the overwhelming majority — an exact
+   * payment. A non-zero value is a withholding-tax deduction the client
+   * remitted to the BIR instead (see `modules/payments/utils/withholdingTax.ts`
+   * and migration 027); it is NOT an outstanding balance.
+   */
+  shortfall_amount: string;
   reference_number: string | null;
   proof_of_payment_url: string | null;
   status: PaymentStatus;
+  /**
+   * Why an admin refused this payment. Non-null only on `rejected` payments —
+   * and even then nullable, since rejections recorded before migration 028 have
+   * no reason stored. Surfaced to the client so they know what to fix before
+   * resubmitting.
+   */
+  rejection_reason: string | null;
   verified_by: number | string | null;
   verified_at: string | null;
   created_at: string;
@@ -62,6 +77,10 @@ export interface PaymentListItem {
   payment_method: PaymentMethod;
   /** NUMERIC(12,2) as a string. */
   amount: string;
+  /** Withholding-tax gap vs. the installment's due amount; "0.00" when exact. See `Payment`. */
+  shortfall_amount: string;
+  /** Why the payment was refused; only meaningful when `status === 'rejected'`. See `Payment`. */
+  rejection_reason: string | null;
   reference_number: string | null;
   status: PaymentStatus;
   created_at: string;

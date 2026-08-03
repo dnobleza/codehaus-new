@@ -53,6 +53,8 @@ const basePayment: Payment = {
   installment_id: 'i-1',
   payment_method: 'gcash',
   amount: '25000.00',
+  shortfall_amount: '0.00',
+  rejection_reason: null,
   reference_number: 'REF123',
   proof_of_payment_url: '/projects/proj-1/payments/p-1/proof',
   status: 'verified',

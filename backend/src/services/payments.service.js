@@ -5,6 +5,8 @@ const paymentInstallmentsRepo = require('../repositories/paymentInstallments.rep
 const notificationsService = require('./notifications.service');
 const { resolvePaymentProofPath } = require('../middleware/upload.middleware');
 const { ROLES } = require('../constants/roles');
+const { MAX_WITHHOLDING_SHORTFALL_RATE } = require('../constants/payments');
+const { classifyInstallmentPayment } = require('../utils/money');
 const logger = require('../utils/logger');
 const TAG = '[PAYMENTS-SERVICE]';
 
@@ -41,11 +43,30 @@ async function notifyProjectClient(db, projectId, eventType, context = {}) {
 // their project's payment_installments schedule (see
 // docs/superpowers/specs/2026-07-18-payment-installment-plan-design.md) --
 // the client never chooses/names an installment; the server resolves it.
-// The submitted amount must match that installment's amount exactly (never
-// trust a client-supplied amount against the schedule). Combines Client
+// The submitted amount is always checked against THAT installment's amount
+// (never trust a client-supplied amount against the schedule), but the check
+// is no longer strict equality -- see WITHHOLDING TAX below. Combines Client
 // Workflow steps 9 ("select payment method") and 10 ("upload proof of
 // payment") into a single write, same as before -- the payment is created
 // directly in 'verification' status (proof already attached).
+//
+// WITHHOLDING TAX (see constants/payments.js and utils/money.js):
+// Philippine corporate clients are withholding agents -- they remit creditable
+// withholding tax to the BIR themselves and pay the supplier the net, e.g.
+// ₱98,000 against a ₱100,000 installment at 2% EWT. Requiring an exact match
+// refused those payments outright and made the product unusable for B2B
+// clients. A payment that falls SHORT by no more than
+// MAX_WITHHOLDING_SHORTFALL_RATE is now accepted, with the gap recorded on the
+// payment as `shortfall_amount` (027_add_payment_shortfall_amount.sql).
+//
+// Three boundaries are held deliberately:
+//   - An EXACT amount behaves precisely as it always did (shortfall 0.00).
+//   - An OVERPAYMENT is still refused: that is a refund/credit-note problem
+//     with different accounting, and is out of scope for this pass.
+//   - A shortfall beyond tolerance is still refused, because at that point it
+//     is a mistyped amount or a genuine partial payment, not a tax deduction.
+// All comparison happens in integer centavos (utils/money.js) -- NUMERIC(12,2)
+// arrives from `pg` as a string and must never be compared as a float.
 async function createPayment({ projectId, clientId, paymentMethod, amount, referenceNumber, proofOfPaymentUrl }) {
   const client = await pool.connect();
   try {
@@ -62,10 +83,27 @@ async function createPayment({ projectId, clientId, paymentMethod, amount, refer
     if (!installment) {
       throw httpError(409, 'This project is not currently awaiting a payment submission');
     }
-    if (Number(amount) !== Number(installment.amount)) {
+    const { outcome, shortfall, dueAmount } = classifyInstallmentPayment(
+      amount,
+      installment.amount,
+      MAX_WITHHOLDING_SHORTFALL_RATE
+    );
+
+    if (outcome === 'invalid') {
+      throw httpError(400, 'Payment amount is not a valid monetary value');
+    }
+    if (outcome === 'overpaid') {
       throw httpError(
         409,
-        `Amount must match installment ${installment.sequence}'s due amount of ${installment.amount}`
+        `Amount cannot exceed installment ${installment.sequence}'s due amount of ${dueAmount}`
+      );
+    }
+    if (outcome === 'underpaid') {
+      throw httpError(
+        409,
+        `Amount is short of installment ${installment.sequence}'s due amount of ${dueAmount} by more than the ` +
+          `${Math.round(MAX_WITHHOLDING_SHORTFALL_RATE * 100)}% allowed for withholding tax. ` +
+          `Pay ${dueAmount}, or the net of ${dueAmount} after withholding tax.`
       );
     }
 
@@ -78,13 +116,15 @@ async function createPayment({ projectId, clientId, paymentMethod, amount, refer
         proofOfPaymentUrl,
         status: 'verification',
         installmentId: installment.id,
+        shortfallAmount: shortfall,
       },
       client
     );
 
     await client.query('COMMIT');
     logger.info(
-      `${TAG} Client ${clientId} submitted payment ${payment.id} for project ${projectId} (installment ${installment.sequence})`
+      `${TAG} Client ${clientId} submitted payment ${payment.id} for project ${projectId} ` +
+        `(installment ${installment.sequence}, ${outcome}${outcome === 'shortfall' ? `, shortfall ${shortfall}` : ''})`
     );
     return payment;
   } catch (error) {
@@ -122,6 +162,13 @@ async function listPaymentsAdmin(filters, actorRole, actorUserId) {
 // without touching projects.status_code -- the project is already in
 // progress by then, and unconditionally overwriting status_code would
 // clobber real build-progress tracking (e.g. 'in_development').
+//
+// A payment carrying a withholding-tax `shortfall_amount` marks its
+// installment 'paid' just like an exact one, deliberately: the shortfall was
+// remitted to the BIR by the client, not withheld from the agency, so nothing
+// remains owed on that installment. Whether the money actually landed is the
+// admin's call at verification time -- they see the shortfall in the queue --
+// and refusing it is what `rejectPayment` is for.
 async function verifyPayment(paymentId, verifiedByUserId) {
   const client = await pool.connect();
   try {
@@ -171,17 +218,25 @@ async function verifyPayment(paymentId, verifiedByUserId) {
 // "the client needs to resubmit"). No transaction needed -- this is a
 // single-statement write, unlike verifyPayment which also has to move the
 // project forward.
-async function rejectPayment(paymentId, verifiedByUserId) {
+//
+// `reason` is REQUIRED, and is stored on the payment
+// (028_add_payment_rejection_reason.sql) so the client is told what to fix
+// instead of being sent back to resubmit the same defective proof. This
+// mirrors projects.service.js#declineProjectAdmin exactly: the validator
+// (adminRejectPaymentSchema) enforces presence and length, the repository
+// writes status and reason in one statement, and the reason rides along in the
+// notification context so it reaches the client without an extra fetch.
+async function rejectPayment(paymentId, verifiedByUserId, reason) {
   const payment = await paymentsRepo.findById(paymentId);
   if (!payment) throw httpError(404, 'Payment not found');
   if (payment.status === 'verified') throw httpError(409, 'A verified payment cannot be rejected');
 
-  const updated = await paymentsRepo.setStatus(paymentId, {
-    status: 'rejected',
+  const updated = await paymentsRepo.reject(paymentId, {
     verifiedBy: verifiedByUserId,
     verifiedAt: new Date(),
+    reason,
   });
-  await notifyProjectClient(pool, payment.project_id, 'payment_rejected');
+  await notifyProjectClient(pool, payment.project_id, 'payment_rejected', { reason });
 
   logger.info(`${TAG} Payment ${paymentId} rejected by user ${verifiedByUserId}`);
   return updated;

@@ -110,8 +110,15 @@ export const adminPaymentsApi = {
     return response.data.data;
   },
 
-  async reject(id: string): Promise<Payment> {
-    const response = await apiClient.patch<ApiEnvelope<Payment>>(`/admin/payments/${id}/reject`);
+  /**
+   * `reason` is required by the API (adminRejectPaymentSchema) — a rejection
+   * without one is a 400. It is stored on the payment and shown back to the
+   * client, who otherwise has no idea what to fix before resubmitting.
+   */
+  async reject(id: string, reason: string): Promise<Payment> {
+    const response = await apiClient.patch<ApiEnvelope<Payment>>(`/admin/payments/${id}/reject`, {
+      reason,
+    });
     return response.data.data;
   },
 };

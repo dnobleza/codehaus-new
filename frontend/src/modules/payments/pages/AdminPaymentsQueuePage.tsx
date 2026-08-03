@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Sheet,
   SheetBody,
@@ -14,7 +15,7 @@ import {
 import { DataTable } from '@/shared/components/feature/DataTable';
 import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
-import { formatPHP } from '@/shared/utils/currency';
+import { formatPHP, toNumber } from '@/shared/utils/currency';
 import { useCan } from '@/shared/auth/useCan';
 import type { ApiError } from '@/shared/api/apiClient';
 import type { Payment, PaymentStatus } from '@/shared/types/payment.types';
@@ -57,6 +58,8 @@ export function AdminPaymentsQueuePage() {
 
   const { data: payments, isLoading, isError, refetch } = useAdminPayments(filters);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   const verifyPayment = useVerifyPayment(selectedPayment?.project_id);
   const rejectPayment = useRejectPayment(selectedPayment?.project_id);
@@ -69,12 +72,25 @@ export function AdminPaymentsQueuePage() {
 
   function handleVerify() {
     if (!selectedPayment) return;
-    verifyPayment.mutate(selectedPayment.id, { onSuccess: () => setSelectedPayment(null) });
+    verifyPayment.mutate(selectedPayment.id, { onSuccess: closeDrawer });
   }
 
+  function closeDrawer() {
+    setSelectedPayment(null);
+    setShowRejectForm(false);
+    setRejectReason('');
+  }
+
+  // Two-step, exactly like the project decline flow in AdminProjectDetailPage:
+  // "Reject" reveals a required reason field rather than rejecting outright.
+  // The reason is what the client reads to learn what to fix, so it can't be
+  // an afterthought the admin is allowed to skip.
   function handleReject() {
-    if (!selectedPayment) return;
-    rejectPayment.mutate(selectedPayment.id, { onSuccess: () => setSelectedPayment(null) });
+    if (!selectedPayment || rejectReason.trim().length === 0) return;
+    rejectPayment.mutate(
+      { id: selectedPayment.id, reason: rejectReason.trim() },
+      { onSuccess: closeDrawer },
+    );
   }
 
   return (
@@ -142,10 +158,7 @@ export function AdminPaymentsQueuePage() {
         />
       )}
 
-      <Sheet
-        open={Boolean(selectedPayment)}
-        onOpenChange={(open) => !open && setSelectedPayment(null)}
-      >
+      <Sheet open={Boolean(selectedPayment)} onOpenChange={(open) => !open && closeDrawer()}>
         <SheetContent>
           <SheetHeader>
             <SheetTitle>Payment detail</SheetTitle>
@@ -162,6 +175,19 @@ export function AdminPaymentsQueuePage() {
                   <dd className="text-right font-medium text-foreground">
                     {formatPHP(selectedPayment.amount)}
                   </dd>
+                  {/* Only shown when non-zero: for the exact-amount majority
+                      this row would be noise on every single review. When it
+                      IS shown, the admin is checking a bank slip that reads
+                      less than the installment and needs to know that gap was
+                      accepted deliberately as withheld tax, not underpaid. */}
+                  {toNumber(selectedPayment.shortfall_amount) > 0 && (
+                    <>
+                      <dt className="text-muted-foreground">Withheld / short by</dt>
+                      <dd className="text-right font-medium text-warning-foreground-on-light">
+                        {formatPHP(selectedPayment.shortfall_amount)}
+                      </dd>
+                    </>
+                  )}
                   <dt className="text-muted-foreground">Method</dt>
                   <dd className="text-right font-medium text-foreground uppercase">
                     {selectedPayment.payment_method}
@@ -177,8 +203,33 @@ export function AdminPaymentsQueuePage() {
                     </Badge>
                   </dd>
                 </dl>
+                {/* An already-rejected payment shows the reason the client was
+                    given, so a second reviewer sees the history rather than
+                    re-deriving it. */}
+                {selectedPayment.status === 'rejected' && selectedPayment.rejection_reason && (
+                  <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                    <p className="text-sm font-medium text-foreground">Reason given to the client</p>
+                    <p className="mt-1 text-sm whitespace-pre-line text-muted-foreground">
+                      {selectedPayment.rejection_reason}
+                    </p>
+                  </div>
+                )}
                 {canViewProof && (
                   <PaymentProofPreview proofUrl={selectedPayment.proof_of_payment_url} />
+                )}
+                {showRejectForm && (
+                  <div className="mt-4 flex flex-col gap-2">
+                    <Textarea
+                      label="Reason for rejecting"
+                      value={rejectReason}
+                      onChange={(event) => setRejectReason(event.target.value)}
+                      placeholder="Tell the client exactly what to fix, e.g. the screenshot is unreadable, or the reference number doesn't match."
+                      disabled={rejectPayment.isPending}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The client sees this message, so be specific about what to correct.
+                    </p>
+                  </div>
                 )}
               </SheetBody>
               {selectedPayment.status === 'verification' && canAction && (
@@ -186,19 +237,40 @@ export function AdminPaymentsQueuePage() {
                   {actionError && (
                     <p className="mr-auto text-sm text-destructive">{actionError.message}</p>
                   )}
-                  <Button
-                    variant="outline"
-                    onClick={handleReject}
-                    disabled={verifyPayment.isPending || rejectPayment.isPending}
-                  >
-                    Reject
-                  </Button>
-                  <Button
-                    onClick={handleVerify}
-                    disabled={verifyPayment.isPending || rejectPayment.isPending}
-                  >
-                    {verifyPayment.isPending ? 'Verifying...' : 'Verify payment'}
-                  </Button>
+                  {showRejectForm ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowRejectForm(false);
+                          setRejectReason('');
+                        }}
+                        disabled={rejectPayment.isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleReject}
+                        disabled={rejectPayment.isPending || rejectReason.trim().length === 0}
+                      >
+                        {rejectPayment.isPending ? 'Rejecting...' : 'Confirm rejection'}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowRejectForm(true)}
+                        disabled={verifyPayment.isPending}
+                      >
+                        Reject
+                      </Button>
+                      <Button onClick={handleVerify} disabled={verifyPayment.isPending}>
+                        {verifyPayment.isPending ? 'Verifying...' : 'Verify payment'}
+                      </Button>
+                    </>
+                  )}
                 </SheetFooter>
               )}
             </>
