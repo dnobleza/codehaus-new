@@ -1,4 +1,5 @@
-import { Controller, useForm } from 'react-hook-form';
+import { useMemo } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { Alert } from '@/components/ui/alert';
@@ -9,15 +10,17 @@ import type { ApiError } from '@/shared/api/apiClient';
 import type { PaymentInstallment } from '@/shared/types/payment.types';
 import { formatPHP, toNumber } from '@/shared/utils/currency';
 import { useSubmitPayment } from '../api/payments.queries';
-import { PAYMENT_METHOD_OPTIONS, paymentFormSchema, type PaymentFormValues } from '../schemas';
+import { paymentAccountFor } from '../paymentAccounts';
+import { createPaymentFormSchema, PAYMENT_METHOD_OPTIONS, type PaymentFormValues } from '../schemas';
+import { shortfallOf } from '../utils/withholdingTax';
 
 interface PaymentFormProps {
   projectId: string;
   /**
    * The next pending installment this submission targets. The backend
-   * resolves "the next pending installment" server-side and rejects any
-   * submitted amount that doesn't match it exactly, so the amount field is
-   * always derived from this installment (never freely entered).
+   * resolves "the next pending installment" server-side; the amount field is
+   * pre-filled from it and validated against it, but is editable downward so a
+   * client withholding tax can submit the net amount they actually sent.
    */
   installment: PaymentInstallment;
   onSubmitted?: () => void;
@@ -46,14 +49,24 @@ function formatDueDate(dateStr: string): string {
 /**
  * Payment method selection + proof-of-payment upload (Client Workflow steps
  * 9-10). Real validation per the brief: required file, required payment
- * method, positive amount. The amount is fixed to the targeted installment
- * — the backend rejects any amount that doesn't match the next pending
- * installment exactly, so the field is read-only rather than freely
- * editable.
+ * method, positive amount.
+ *
+ * The amount is pre-filled from the targeted installment and may be REDUCED
+ * but never increased. Philippine corporate clients withhold creditable tax
+ * (EWT) and remit the net — e.g. ₱98,000 against a ₱100,000 installment — so
+ * a read-only field locked to the exact amount made the flow unusable for
+ * them. The bound (at most the amount due, at least the amount due less the
+ * withholding tolerance) mirrors the server rule in
+ * `backend/src/services/payments.service.js`.
+ *
+ * Selecting a method also reveals WHERE to send the money
+ * (`../paymentAccounts.ts`) — previously the form asked for proof of a
+ * transfer without ever naming the destination account.
  */
 export function PaymentForm({ projectId, installment, onSubmitted }: PaymentFormProps) {
   const submitPayment = useSubmitPayment(projectId);
   const installmentAmount = toNumber(installment.amount);
+  const formSchema = useMemo(() => createPaymentFormSchema(installment.amount), [installment.amount]);
 
   const {
     control,
@@ -61,13 +74,20 @@ export function PaymentForm({ projectId, installment, onSubmitted }: PaymentForm
     handleSubmit,
     formState: { errors },
   } = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentFormSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       paymentMethod: undefined,
       amount: installmentAmount > 0 ? String(installmentAmount) : '',
       referenceNumber: '',
     },
   });
+
+  // Drives both the account-details panel (which account to pay into) and the
+  // live shortfall hint under the amount field.
+  const selectedMethod = useWatch({ control, name: 'paymentMethod' });
+  const enteredAmount = useWatch({ control, name: 'amount' });
+  const account = paymentAccountFor(selectedMethod);
+  const shortfall = shortfallOf(enteredAmount, installment.amount);
 
   function onSubmit(values: PaymentFormValues) {
     submitPayment.mutate(
@@ -141,12 +161,42 @@ export function PaymentForm({ projectId, installment, onSubmitted }: PaymentForm
         )}
       />
 
+      {account && (
+        <section
+          aria-labelledby="payment-account-title"
+          className="rounded-lg border border-input bg-muted/50 p-4"
+        >
+          <h3 id="payment-account-title" className="text-sm font-medium text-foreground">
+            {account.title}
+          </h3>
+          <dl className="mt-2 flex flex-col gap-1">
+            {account.fields.map((field) => (
+              <div key={field.label} className="flex flex-wrap items-baseline justify-between gap-2">
+                <dt className="text-sm text-muted-foreground">{field.label}</dt>
+                <dd
+                  className={cn(
+                    'text-sm font-medium text-foreground',
+                    field.copyable && 'font-mono tracking-wide select-all',
+                  )}
+                >
+                  {field.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-2 text-xs text-muted-foreground">{account.note}</p>
+        </section>
+      )}
+
       <Input
-        label={`Amount to pay (Installment ${installment.sequence} of 5 — fixed)`}
+        label={`Amount to pay (Installment ${installment.sequence} of 5)`}
         type="text"
         inputMode="decimal"
-        readOnly
-        helperText={`${formatPHP(installment.amount)} — this amount is set by your payment schedule and can't be edited.`}
+        helperText={
+          shortfall > 0
+            ? `${formatPHP(installment.amount)} is due. You've entered ${formatPHP(shortfall)} less — submit this only if you withheld tax on this payment.`
+            : `${formatPHP(installment.amount)} is due. Lower this only if you're withholding tax and sending the net amount.`
+        }
         error={errors.amount?.message}
         {...register('amount')}
       />

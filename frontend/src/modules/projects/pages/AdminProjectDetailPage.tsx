@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ErrorState } from '@/shared/components/common/ErrorState';
 import { LoadingSpinner } from '@/shared/components/common/LoadingSpinner';
 import type { ApiError } from '@/shared/api/apiClient';
-import { formatPHP } from '@/shared/utils/currency';
+import { formatPHP, toNumber } from '@/shared/utils/currency';
 import { useAuthStore } from '@/shared/store/auth.store';
 import { useCan } from '@/shared/auth/useCan';
 import { dashboardPathForRole } from '@/shared/constants/roles';
@@ -108,6 +108,8 @@ export function AdminProjectDetailPage() {
   const [nextStatus, setNextStatus] = useState<ProjectStatusCode | null>(null);
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
+  const [showPaymentRejectForm, setShowPaymentRejectForm] = useState(false);
+  const [paymentRejectReason, setPaymentRejectReason] = useState('');
 
   const updateStatus = useUpdateProjectStatus(id ?? '');
   const acceptProject = useAcceptProject(id ?? '');
@@ -444,30 +446,94 @@ export function AdminProjectDetailPage() {
               <dd className="text-right font-medium text-foreground uppercase">
                 {latestPayment.payment_method}
               </dd>
+              {/* Shown only when non-zero — the client withheld tax and remitted
+                  the net, so the slip will read less than the installment. */}
+              {toNumber(latestPayment.shortfall_amount) > 0 && (
+                <>
+                  <dt className="text-muted-foreground">Withheld / short by</dt>
+                  <dd className="text-right font-medium text-warning-foreground-on-light">
+                    {formatPHP(latestPayment.shortfall_amount)}
+                  </dd>
+                </>
+              )}
               <dt className="text-muted-foreground">Reference number</dt>
               <dd className="text-right font-medium text-foreground">
                 {latestPayment.reference_number ?? '—'}
               </dd>
             </dl>
+            {latestPayment.status === 'rejected' && latestPayment.rejection_reason && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                <p className="text-sm font-medium text-foreground">Reason given to the client</p>
+                <p className="mt-1 text-sm whitespace-pre-line text-muted-foreground">
+                  {latestPayment.rejection_reason}
+                </p>
+              </div>
+            )}
             {canViewPaymentProof && (
               <PaymentProofPreview proofUrl={latestPayment.proof_of_payment_url} />
             )}
 
             {latestPayment.status === 'verification' && canVerifyPayment && canRejectPayment && (
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => rejectPayment.mutate(latestPayment.id)}
-                  disabled={verifyPayment.isPending || rejectPayment.isPending}
-                >
-                  Reject
-                </Button>
-                <Button
-                  onClick={() => verifyPayment.mutate(latestPayment.id)}
-                  disabled={verifyPayment.isPending || rejectPayment.isPending}
-                >
-                  {verifyPayment.isPending ? 'Verifying...' : 'Verify payment'}
-                </Button>
+              // Two-step reject with a required reason, identical in shape to
+              // this page's project-decline flow above — the client is told to
+              // resubmit, so they have to be told what to fix.
+              <div className="flex flex-col gap-3">
+                {showPaymentRejectForm ? (
+                  <>
+                    <Textarea
+                      label="Reason for rejecting"
+                      value={paymentRejectReason}
+                      onChange={(event) => setPaymentRejectReason(event.target.value)}
+                      placeholder="Tell the client exactly what to fix, e.g. the screenshot is unreadable."
+                      disabled={rejectPayment.isPending}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowPaymentRejectForm(false);
+                          setPaymentRejectReason('');
+                        }}
+                        disabled={rejectPayment.isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() =>
+                          rejectPayment.mutate(
+                            { id: latestPayment.id, reason: paymentRejectReason.trim() },
+                            {
+                              onSuccess: () => {
+                                setShowPaymentRejectForm(false);
+                                setPaymentRejectReason('');
+                              },
+                            },
+                          )
+                        }
+                        disabled={rejectPayment.isPending || paymentRejectReason.trim().length === 0}
+                      >
+                        {rejectPayment.isPending ? 'Rejecting...' : 'Confirm rejection'}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowPaymentRejectForm(true)}
+                      disabled={verifyPayment.isPending}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      onClick={() => verifyPayment.mutate(latestPayment.id)}
+                      disabled={verifyPayment.isPending}
+                    >
+                      {verifyPayment.isPending ? 'Verifying...' : 'Verify payment'}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

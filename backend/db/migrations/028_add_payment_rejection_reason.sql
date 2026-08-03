@@ -1,0 +1,27 @@
+-- Adds a place to record WHY an admin rejected a submitted payment.
+--
+-- Directly mirrors 017_add_project_decline_reason.sql (projects.decline_reason)
+-- -- same problem, same shape, same rationale. Rejecting a payment tells the
+-- client to resubmit, but `payments.status = 'rejected'` only records THAT it
+-- was refused, never what was wrong with it (unreadable screenshot, wrong
+-- reference number, amount sent to the wrong account). The client was left to
+-- guess, and typically resubmitted the same defective proof.
+--
+-- Stored on the payment row rather than in a separate audit table for the same
+-- reason decline_reason lives on `projects`: it must be trivially available to
+-- both the admin verification queue and the client's own payments/invoices
+-- views, which surface it straight back to the client.
+--
+-- Nullable, exactly like decline_reason. Two reasons, both deliberate:
+--   1. The overwhelming majority of payments are never rejected, so the column
+--      stays NULL for every other lifecycle path.
+--   2. Rejections that predate this migration have no reason to backfill, and
+--      inventing one ("Rejected") would be fabricating an audit record.
+-- New rejections through the API are still REQUIRED to carry a reason -- that
+-- rule is enforced at the validator/service layer (adminRejectPaymentSchema in
+-- payments.validator.js), which is precisely how adminDeclineSchema enforces
+-- it for decline_reason. The DB stays permissive so historical rows remain
+-- valid; the API stays strict so new ones are always explained.
+--
+-- Idempotent in the house style of 016_reconcile_project_statuses.sql.
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS rejection_reason TEXT;

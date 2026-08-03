@@ -1,6 +1,9 @@
+import { Fragment } from 'react';
+
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatPHP } from '@/shared/utils/currency';
+import { cn } from '@/lib/utils';
+import { formatPHP, toNumber } from '@/shared/utils/currency';
 import type { PaymentListItem, ProjectInvoice } from '@/shared/types/payment.types';
 import codehausLogo from '@/assets/codehaus-logo.svg';
 import {
@@ -34,6 +37,16 @@ function installmentLabelFor(payment: PaymentListItem): string | null {
   return payment.installment_sequence === null
     ? null
     : getInstallmentLabel(payment.installment_sequence);
+}
+
+/**
+ * The reason an admin gave for refusing this payment, or `null` when there is
+ * nothing to show. Guards on status too: `rejection_reason` is only meaningful
+ * on a `rejected` payment, and a stale reason must never surface next to a
+ * payment that was later resubmitted and verified.
+ */
+function rejectionReasonOf(payment: PaymentListItem): string | null {
+  return payment.status === 'rejected' ? (payment.rejection_reason ?? null) : null;
 }
 
 /**
@@ -95,22 +108,49 @@ export function PaymentHistoryReceipt({ invoice }: PaymentHistoryReceiptProps) {
             </thead>
             <tbody>
               {invoice.payments.map((payment) => (
-                <tr key={payment.id} className="h-11 border-b border-border last:border-0">
-                  <td className="px-2 text-foreground">{formatPaymentDate(payment.created_at)}</td>
-                  <td className="px-2 font-medium text-foreground">
-                    {installmentLabelFor(payment) ?? '—'}
-                  </td>
-                  <td className="px-2 text-foreground">
-                    {PAYMENT_METHOD_LABEL[payment.payment_method]}
-                  </td>
-                  <td className="px-2 text-foreground">{payment.reference_number ?? '—'}</td>
-                  <td className="px-2 font-medium text-foreground">{formatPHP(payment.amount)}</td>
-                  <td className="px-2">
-                    <Badge variant={PAYMENT_STATUS_BADGE[payment.status]}>
-                      {PAYMENT_STATUS_LABEL[payment.status]}
-                    </Badge>
-                  </td>
-                </tr>
+                <Fragment key={payment.id}>
+                  <tr
+                    className={cn(
+                      'h-11 border-b border-border last:border-0',
+                      // A rejected payment's reason renders in the row below, so
+                      // this row keeps its border only when there is no such row.
+                      rejectionReasonOf(payment) && 'border-b-0',
+                    )}
+                  >
+                    <td className="px-2 text-foreground">{formatPaymentDate(payment.created_at)}</td>
+                    <td className="px-2 font-medium text-foreground">
+                      {installmentLabelFor(payment) ?? '—'}
+                    </td>
+                    <td className="px-2 text-foreground">
+                      {PAYMENT_METHOD_LABEL[payment.payment_method]}
+                    </td>
+                    <td className="px-2 text-foreground">{payment.reference_number ?? '—'}</td>
+                    <td className="px-2 font-medium text-foreground">
+                      {formatPHP(payment.amount)}
+                      {toNumber(payment.shortfall_amount) > 0 && (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {formatPHP(payment.shortfall_amount)} withheld
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-2">
+                      <Badge variant={PAYMENT_STATUS_BADGE[payment.status]}>
+                        {PAYMENT_STATUS_LABEL[payment.status]}
+                      </Badge>
+                    </td>
+                  </tr>
+                  {/* Without this the client is told to resubmit with no idea
+                      what was wrong, and typically resubmits the same file. */}
+                  {rejectionReasonOf(payment) && (
+                    <tr className="border-b border-border last:border-0">
+                      <td colSpan={6} className="px-2 pb-3">
+                        <p className="text-xs whitespace-pre-line text-destructive">
+                          Why this was rejected: {rejectionReasonOf(payment)}
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -145,7 +185,20 @@ export function PaymentHistoryReceipt({ invoice }: PaymentHistoryReceiptProps) {
                 <dd className="text-right font-medium text-foreground">
                   {formatPHP(payment.amount)}
                 </dd>
+                {toNumber(payment.shortfall_amount) > 0 && (
+                  <>
+                    <dt className="text-xs text-muted-foreground">Withheld</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {formatPHP(payment.shortfall_amount)}
+                    </dd>
+                  </>
+                )}
               </dl>
+              {rejectionReasonOf(payment) && (
+                <p className="mt-2 text-xs whitespace-pre-line text-destructive">
+                  Why this was rejected: {rejectionReasonOf(payment)}
+                </p>
+              )}
             </li>
           ))}
         </ul>

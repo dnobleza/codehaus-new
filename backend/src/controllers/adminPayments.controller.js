@@ -2,6 +2,7 @@ const logger = require('../utils/logger');
 const { toHttpError } = require('../utils/httpError');
 const paymentsService = require('../services/payments.service');
 const { presentPayment, presentPayments } = require('../utils/paymentPresenter');
+const { adminRejectPaymentSchema } = require('../validators/payments.validator');
 const TAG = '[ADMIN-PAYMENTS-CONTROLLER]';
 
 exports.list = async (req, res, next) => {
@@ -36,7 +37,8 @@ exports.verify = async (req, res, next) => {
 
 exports.reject = async (req, res, next) => {
   try {
-    const payment = await paymentsService.rejectPayment(req.params.id, req.user.id);
+    const { reason } = adminRejectPaymentSchema.parse(req.body);
+    const payment = await paymentsService.rejectPayment(req.params.id, req.user.id, reason);
     logger.info(`${TAG} Payment ${req.params.id} rejected by user ${req.user.id}`);
     res.status(200).json({ success: true, message: 'Payment rejected', data: presentPayment(payment) });
   } catch (error) {
