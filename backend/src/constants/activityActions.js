@@ -29,6 +29,14 @@ const ACTIVITY_ACTIONS = Object.freeze({
   PROJECT_ACCEPTED: 'project_accepted',
   PROJECT_DECLINED: 'project_declined',
   PROJECT_DELIVERED: 'project_delivered',
+
+  // The sixth commercial action (030), added after 029 shipped without it:
+  // the generic PATCH /admin/projects/:id/status endpoint, which moves a
+  // project through every transition NOT covered by the five actions above
+  // (scheduled, in_testing, on_hold, ...). The transition graph
+  // (constants/projectStatusTransitions.js) proves a move was legal; this is
+  // what records who made it.
+  PROJECT_STATUS_CHANGED: 'project_status_changed',
 });
 
 /** The subset that must never be written outside a transaction. */
@@ -38,6 +46,7 @@ const FINANCIAL_ACTIONS = Object.freeze([
   ACTIVITY_ACTIONS.PROJECT_ACCEPTED,
   ACTIVITY_ACTIONS.PROJECT_DECLINED,
   ACTIVITY_ACTIONS.PROJECT_DELIVERED,
+  ACTIVITY_ACTIONS.PROJECT_STATUS_CHANGED,
 ]);
 
 module.exports = { ACTIVITY_ACTIONS, FINANCIAL_ACTIONS };

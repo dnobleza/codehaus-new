@@ -41,10 +41,12 @@ exports.updateStatus = async (req, res, next) => {
     const { statusCode } = adminStatusUpdateSchema.parse(req.body);
     // Role travels to the service because this endpoint serves both delivery
     // progress and commercial outcomes; only the service can tell them apart.
+    // req.user.id is the audit actor -- see activity_log's actor attribution.
     const project = await projectsService.updateProjectStatusAdmin(
       req.params.id,
       statusCode,
       req.user?.role,
+      req.user?.id,
     );
     logger.info(`${TAG} Project ${req.params.id} status updated to ${statusCode}`);
     res.status(200).json({ success: true, message: 'Project status updated successfully', data: project });

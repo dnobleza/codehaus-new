@@ -28,19 +28,31 @@ import path from 'path';
 const require = createRequire(import.meta.url);
 const { ACTIVITY_ACTIONS, FINANCIAL_ACTIONS } = require('../src/constants/activityActions');
 
-const MIGRATION_029 = readFileSync(
-  path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')), '..', 'db', 'migrations', '029_add_activity_log_commercial_action_types.sql'),
+// 030 is the constraint's CURRENT definition -- it drops and recreates the
+// whole CHECK, superseding 029's list rather than adding to it (both
+// migrations use the same idempotent drop-and-recreate house style as
+// 016_reconcile_project_statuses.sql). So 030's text, not 029's, is the real
+// authority on what the database currently accepts.
+const MIGRATIONS_DIR = path.join(
+  path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')),
+  '..',
+  'db',
+  'migrations'
+);
+const CURRENT_CHECK_CONSTRAINT = readFileSync(
+  path.join(MIGRATIONS_DIR, '030_add_activity_log_status_changed_type.sql'),
   'utf8'
 );
 
 describe('activity action constants', () => {
-  it('names exactly the five financial/commercial actions issue 6 scopes', () => {
+  it('names exactly the six financial/commercial actions issues 6 and 3 scope', () => {
     expect([...FINANCIAL_ACTIONS].sort()).toEqual([
       'payment_rejected',
       'payment_verified',
       'project_accepted',
       'project_declined',
       'project_delivered',
+      'project_status_changed',
     ]);
   });
 
@@ -53,13 +65,15 @@ describe('activity action constants', () => {
     }
   });
 
-  it('every constant appears in migration 029\'s CHECK constraint', () => {
+  it('every constant appears in the current CHECK constraint (030)', () => {
     // The DB constraint is the real authority; a constant that is not in it
     // would fail at INSERT time with an opaque 23514 -- and because these
     // writes sit inside the transaction of the action they audit, that would
-    // roll back a legitimate payment verification.
+    // roll back a legitimate payment verification or status change.
     for (const value of Object.values(ACTIVITY_ACTIONS)) {
-      expect(MIGRATION_029, `"${value}" missing from 029's CHECK constraint`).toContain(`'${value}'`);
+      expect(CURRENT_CHECK_CONSTRAINT, `"${value}" missing from 030's CHECK constraint`).toContain(
+        `'${value}'`
+      );
     }
   });
 
@@ -78,6 +92,7 @@ describe('audited service functions accept an actor', () => {
     acceptProjectAdmin: 2, // (id, actorUserId)
     declineProjectAdmin: 3, // (id, reason, actorUserId)
     markProjectDeliveredAdmin: 2, // (id, actorUserId)
+    updateProjectStatusAdmin: 4, // (id, statusCode, actorRole, actorUserId)
   };
 
   it('projects.service exposes the audited functions with an actor parameter', async () => {
@@ -127,6 +142,12 @@ describe('audited actions are transactional', () => {
     ['projects.service', 'acceptProjectAdmin'],
     ['projects.service', 'declineProjectAdmin'],
     ['projects.service', 'markProjectDeliveredAdmin'],
+    // updateProjectStatusAdmin was already transactional before this test
+    // existed (its BEGIN/COMMIT predates the audit trail -- it needs one
+    // regardless, to keep a status write and the milestone-template
+    // side-effect atomic). What's new is the activityRepo.create call inside
+    // it; the transactional shape itself is not this function's news.
+    ['projects.service', 'updateProjectStatusAdmin'],
     ['payments.service', 'verifyPayment'],
     ['payments.service', 'rejectPayment'],
   ];
